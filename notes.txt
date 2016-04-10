@@ -1,0 +1,6 @@
+Nonogram — Turn your picture into a puzzle
+http://liacs.leidenuniv.nl/~kosterswa/nono/sjoerd/indexeng.html
+http://nonomaker.com/?id=YyyPbE
+
+Example Code
+https://github.com/jeremypw/gnonograms/tree/master/gnonograms-java
