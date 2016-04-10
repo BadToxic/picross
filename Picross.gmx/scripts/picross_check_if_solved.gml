@@ -22,6 +22,11 @@ for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
                 return false;
             }
         }
+        else {
+            if (game_field[field_index_y, field_index_x] == 1) {
+                return false;
+            }
+        }
         
     }
 }
