@@ -43,6 +43,10 @@ game_area_y2 = game_area_y1 + fields_y * field_size;
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);
 
+// Array to remember if it was clicked
+game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
+click_command = undefined;
+
 // And create a random solution
 solution = picross_generate_random_pattern(fields_x, fields_y);
 
@@ -126,25 +130,79 @@ for (var field_index_x = fields_x - 1; field_index_x &gt;= 0; field_index_x--) {
         var y2 = yy - 1;
         
         var mouse_index = 0;
+        
+        if (device_mouse_check_button_released(mouse_index, mb_left) || device_mouse_check_button_released(mouse_index, mb_right)) {
+            game_field_clicked = picross_clear_array(game_field_clicked);
+            click_command = undefined;
+        }
+        
         if (device_mouse_x(mouse_index) &gt;= x1) {
             if (device_mouse_y(mouse_index) &gt;= y1) {
                 if (device_mouse_x(mouse_index) &lt; x2) {
                     if (device_mouse_y(mouse_index) &lt; y2) {
-                        if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                            if (field_state == 1) {
-                                field_state = 0;
-                            } else {
-                                field_state = 1;
-                            }
-                            state_changed = true;
-                        } else if (device_mouse_check_button_pressed(mouse_index, mb_right)) {
-                            if (field_state == -1) {
-                                field_state = 0;
-                            } else {
-                                if (field_state == 1) {
-                                    state_changed = true;
+                        if (!game_field_clicked[field_index_y, field_index_x]) {
+                            if (device_mouse_check_button(mouse_index, mb_left)) {
+                            
+                                if (is_undefined(click_command)) {
+                                    if (field_state == 0) {
+                                        click_command = 1;
+                                    } else {
+                                        click_command = 0;
+                                    }
                                 }
-                                field_state = -1;
+                                
+                                if (click_command == 0) {
+                                    if (field_state != 0) {
+                                        field_state = 0;
+                                        state_changed = true;
+                                    }
+                                } else if (click_command == 1) {
+                                    if (field_state == 0) {
+                                        field_state = 1;
+                                        state_changed = true;
+                                    }
+                                }
+                                
+                            
+                                /*if (field_state == 1) {
+                                    field_state = 0;
+                                } else {
+                                    field_state = 1;
+                                }*/
+                                
+                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                            } else if (device_mouse_check_button(mouse_index, mb_right)) {
+                            
+                                if (is_undefined(click_command)) {
+                                    if (field_state == 0) {
+                                        click_command = -1;
+                                    } else {
+                                        click_command = 0;
+                                    }
+                                }
+                                
+                                if (click_command == 0) {
+                                    if (field_state != 0) {
+                                        field_state = 0;
+                                        state_changed = true;
+                                    }
+                                } else if (click_command == -1) {
+                                    if (field_state == 0) {
+                                        field_state = -1;
+                                        state_changed = true;
+                                    }
+                                }
+                            
+                            
+                                /*if (field_state == -1) {
+                                    field_state = 0;
+                                } else {
+                                    if (field_state == 1) {
+                                        state_changed = true;
+                                    }
+                                    field_state = -1;
+                                }*/
+                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
                             }
                         }
                     }
