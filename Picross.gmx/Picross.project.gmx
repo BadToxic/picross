@@ -14,11 +14,16 @@
       <script>scripts\picross_generate_random_pattern.gml</script>
       <script>scripts\picross_check_if_solved.gml</script>
       <script>scripts\picross_clear_array.gml</script>
+      <script>scripts\picross_create_ui_nodes.gml</script>
       <script>scripts\picross_count_numbers.gml</script>
+      <script>scripts\picross_zoom_node.gml</script>
     </scripts>
   </scripts>
   <objects name="objects">
-    <object>objects\obj_picross_controller</object>
+    <objects name="picross">
+      <object>objects\obj_picross_controller</object>
+      <object>objects\obj_picross_ui_node</object>
+    </objects>
   </objects>
   <rooms name="rooms">
     <room>rooms\room_game</room>

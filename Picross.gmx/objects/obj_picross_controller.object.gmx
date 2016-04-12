@@ -28,17 +28,24 @@
             <string>/// Initialize game
 randomize();
 
+use_ui_nodes = true;
 
 fields_x = 10;
 fields_y = 5;
 
 field_size = 64;
 field_size2 = field_size / 2;
+// field_sizeQ = sqrt(2 * field_size2 * field_size2);
 
 game_area_x1 = 200;
 game_area_y1 = 230;
-game_area_x2 = game_area_x1 + fields_x * field_size;
-game_area_y2 = game_area_y1 + fields_y * field_size;
+game_area_w  = fields_x * field_size;
+game_area_h  = fields_y * field_size;
+game_area_x2 = game_area_x1 + game_area_w;
+game_area_y2 = game_area_y1 + game_area_h;
+
+game_area_mx = game_area_x1 + game_area_w / 2;
+game_area_my = game_area_y1 + game_area_h / 2;
 
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);
@@ -46,6 +53,13 @@ game_field = picross_create_empty_game_field(fields_x, fields_y);
 // Array to remember if it was clicked
 game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
 click_command = undefined;
+
+// User Interface nodes for graphic effects (obj_picross_ui_node)
+ui_nodes = noone;
+if (use_ui_nodes) {
+    ui_nodes = picross_create_ui_nodes(game_field);
+}
+
 
 // And create a random solution
 solution = picross_generate_random_pattern(fields_x, fields_y);
@@ -117,115 +131,144 @@ draw_set_valign(fa_top);
 var state_changed = false;
 // Handle game area
 xx = game_area_x2;
-for (var field_index_x = fields_x - 1; field_index_x &gt;= 0; field_index_x--) {
+for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
     yy = game_area_y2;
     
-    for (var field_index_y = fields_y - 1; field_index_y &gt;= 0; field_index_y--) {
-    
-        var field_state = game_field[field_index_y, field_index_x];
-        
-        var x1 = xx - field_size + 1;
-        var y1 = yy - field_size + 1;
-        var x2 = xx - 1;
-        var y2 = yy - 1;
-        
-        var mouse_index = 0;
-        
-        if (device_mouse_check_button_released(mouse_index, mb_left) || device_mouse_check_button_released(mouse_index, mb_right)) {
-            game_field_clicked = picross_clear_array(game_field_clicked);
-            click_command = undefined;
-        }
-        
-        if (device_mouse_x(mouse_index) &gt;= x1) {
-            if (device_mouse_y(mouse_index) &gt;= y1) {
-                if (device_mouse_x(mouse_index) &lt; x2) {
-                    if (device_mouse_y(mouse_index) &lt; y2) {
-                        if (!game_field_clicked[field_index_y, field_index_x]) {
-                            if (device_mouse_check_button(mouse_index, mb_left)) {
-                            
-                                if (is_undefined(click_command)) {
-                                    if (field_state == 0) {
-                                        click_command = 1;
-                                    } else {
-                                        click_command = 0;
-                                    }
+    for (var field_index_y = fields_y; field_index_y &gt;= 0; field_index_y--) {
+        if (field_index_x &lt; fields_x) if (field_index_y &lt; fields_y) {
+            var field_state = game_field[field_index_y, field_index_x];
+            
+            var x1 = xx - field_size + 1;
+            var y1 = yy - field_size + 1;
+            var x2 = xx - 1;
+            var y2 = yy - 1;
+            
+            var mouse_index = 0;
+            
+            if (device_mouse_check_button_released(mouse_index, mb_left) || device_mouse_check_button_released(mouse_index, mb_right)) {
+                game_field_clicked = picross_clear_array(game_field_clicked);
+                click_command = undefined;
+            }
+            
+            if (device_mouse_x(mouse_index) &gt;= x1) {
+                if (device_mouse_y(mouse_index) &gt;= y1) {
+                    if (device_mouse_x(mouse_index) &lt;= x2 + 1) {
+                        if (device_mouse_y(mouse_index) &lt;= y2 + 1) {
+                        
+                            for (var zoom_index_x = min(field_index_x + 3, fields_x - 1); zoom_index_x &gt;= max(0, field_index_x - 3); zoom_index_x--) {
+                                for (var zoom_index_y = min(field_index_y + 3, fields_y - 1); zoom_index_y &gt;= max(0, field_index_y - 3); zoom_index_y--) {
+                        
+                                    picross_zoom_node(zoom_index_x, zoom_index_y, mouse_index, field_size / 8);
+                                    
                                 }
+                            }                        
+                        
+                            if (!game_field_clicked[field_index_y, field_index_x]) {
+                                if (device_mouse_check_button(mouse_index, mb_left)) {
                                 
-                                if (click_command == 0) {
-                                    if (field_state != 0) {
-                                        field_state = 0;
-                                        state_changed = true;
+                                    if (is_undefined(click_command)) {
+                                        if (field_state == 0) {
+                                            click_command = 1;
+                                        } else {
+                                            click_command = 0;
+                                        }
                                     }
-                                } else if (click_command == 1) {
-                                    if (field_state == 0) {
+                                    
+                                    if (click_command == 0) {
+                                        if (field_state != 0) {
+                                            field_state = 0;
+                                            state_changed = true;
+                                        }
+                                    } else if (click_command == 1) {
+                                        if (field_state == 0) {
+                                            field_state = 1;
+                                            state_changed = true;
+                                        }
+                                    }
+                                    
+                                
+                                    /*if (field_state == 1) {
+                                        field_state = 0;
+                                    } else {
                                         field_state = 1;
-                                        state_changed = true;
+                                    }*/
+                                    
+                                    game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                                } else if (device_mouse_check_button(mouse_index, mb_right)) {
+                                
+                                    if (is_undefined(click_command)) {
+                                        if (field_state == 0) {
+                                            click_command = -1;
+                                        } else {
+                                            click_command = 0;
+                                        }
                                     }
-                                }
-                                
-                            
-                                /*if (field_state == 1) {
-                                    field_state = 0;
-                                } else {
-                                    field_state = 1;
-                                }*/
-                                
-                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
-                            } else if (device_mouse_check_button(mouse_index, mb_right)) {
-                            
-                                if (is_undefined(click_command)) {
-                                    if (field_state == 0) {
-                                        click_command = -1;
-                                    } else {
-                                        click_command = 0;
+                                    
+                                    if (click_command == 0) {
+                                        if (field_state != 0) {
+                                            field_state = 0;
+                                            state_changed = true;
+                                        }
+                                    } else if (click_command == -1) {
+                                        if (field_state == 0) {
+                                            field_state = -1;
+                                            state_changed = true;
+                                        }
                                     }
-                                }
                                 
-                                if (click_command == 0) {
-                                    if (field_state != 0) {
+                                
+                                    /*if (field_state == -1) {
                                         field_state = 0;
-                                        state_changed = true;
-                                    }
-                                } else if (click_command == -1) {
-                                    if (field_state == 0) {
+                                    } else {
+                                        if (field_state == 1) {
+                                            state_changed = true;
+                                        }
                                         field_state = -1;
-                                        state_changed = true;
-                                    }
+                                    }*/
+                                    game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
                                 }
-                            
-                            
-                                /*if (field_state == -1) {
-                                    field_state = 0;
-                                } else {
-                                    if (field_state == 1) {
-                                        state_changed = true;
-                                    }
-                                    field_state = -1;
-                                }*/
-                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
                             }
                         }
                     }
                 }
             }
+            game_field[field_index_y, field_index_x] = field_state;
+            
+            if (field_state == 1) {
+                draw_set_alpha(0.8);
+                draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_aqua, c_blue, false);
+            } else if (field_state == -1) {
+                draw_set_alpha(0.6);
+                draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_black, c_white, false);
+            }
+            draw_set_alpha(1);
+            
+            draw_set_color(c_black);
+            if (!use_ui_nodes) {
+                draw_rectangle(x1, y1, x2, y2, true);
+            }
+            
+            yy -= field_size;
         }
-        game_field[field_index_y, field_index_x] = field_state;
-        
-        if (field_state == 1) {
-            draw_set_alpha(0.8);
-            draw_roundrect_colour(x1, y1, x2, y2, c_aqua, c_blue, false);
-        } else if (field_state == -1) {
-            draw_set_alpha(0.6);
-            draw_roundrect_colour(x1, y1, x2, y2, c_black, c_white, false);
-        }
-        draw_set_alpha(1);
         
         draw_set_color(c_black);
-        draw_rectangle(x1, y1, x2, y2, true);
+        if (use_ui_nodes) {
+            if (field_index_x &lt; fields_x) {
+                var n1 = ui_nodes[field_index_y, field_index_x];
+                var n2 = ui_nodes[field_index_y, field_index_x + 1];
+                draw_line(n1.x, n1.y, n2.x, n2.y);
+            }
+            if (field_index_y &lt; fields_y) {
+                var n1 = ui_nodes[field_index_y, field_index_x];
+                var n2 = ui_nodes[field_index_y + 1, field_index_x];
+                draw_line(n1.x, n1.y, n2.x, n2.y);
+            }
+        }
         
-        yy -= field_size;
     }
-    xx -= field_size;
+    if (field_index_x &lt; fields_x) {
+        xx -= field_size;
+    }
 }
 
 // State changed - check for win
