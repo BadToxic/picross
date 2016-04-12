@@ -5,8 +5,18 @@
   </Configs>
   <NewExtensions/>
   <sounds name="sound"/>
-  <sprites name="sprites"/>
-  <backgrounds name="background"/>
+  <sprites name="sprites">
+    <sprites name="picross">
+      <sprite>sprites\spr_picross_mark</sprite>
+      <sprite>sprites\spr_picross_mark_false</sprite>
+    </sprites>
+  </sprites>
+  <backgrounds name="background">
+    <backgrounds name="picross">
+      <background>background\back_picross_0</background>
+      <background>background\back_picross_1</background>
+    </backgrounds>
+  </backgrounds>
   <paths name="paths"/>
   <scripts name="scripts">
     <scripts name="picross">
