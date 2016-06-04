@@ -37,19 +37,7 @@ use_ui_nodes = true;
 fields_x = 10;
 fields_y = 5;
 
-field_size = 64;
-field_size2 = field_size / 2;
-// field_sizeQ = sqrt(2 * field_size2 * field_size2);
-
-game_area_x1 = 200;
-game_area_y1 = 230;
-game_area_w  = fields_x * field_size;
-game_area_h  = fields_y * field_size;
-game_area_x2 = game_area_x1 + game_area_w;
-game_area_y2 = game_area_y1 + game_area_h;
-
-game_area_mx = game_area_x1 + game_area_w / 2;
-game_area_my = game_area_y1 + game_area_h / 2;
+event_user(0); // Set positions and sizes
 
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);
@@ -71,6 +59,52 @@ solution = picross_generate_random_pattern(fields_x, fields_y);
 // Count the numbers to display next to the game area.
 // Stores them in the arrays row_numbers and column_numbers.
 picross_count_numbers(solution);
+</string>
+          </argument>
+        </arguments>
+      </action>
+    </event>
+    <event eventtype="7" enumb="10">
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Set positions and sizes
+field_size = 64;
+field_size2 = field_size / 2;
+
+game_area_x1 = 248;
+game_area_y1 = 230;
+game_area_w  = fields_x * field_size;
+game_area_h  = fields_y * field_size;
+game_area_x2 = game_area_x1 + game_area_w;
+game_area_y2 = game_area_y1 + game_area_h;
+
+game_area_mx = game_area_x1 + game_area_w / 2;
+game_area_my = game_area_y1 + game_area_h / 2;
+
+number_size = 12;
+mark_sprite = spr_picross_mark;
+mark_false_sprite = spr_picross_mark_false;
+negative_button_width = 128;
+negative_button_x1 = view_xview[0] - 8;
+negative_button_y1 = view_yview[0] + view_hview[0] / 2;
+negative_button_x2 = view_xview[0] + negative_button_width;
+negative_button_y2 = view_yview[0] + view_hview[0] + 8;
+negative_button_icon_x = negative_button_x1 + 10;
+negative_button_icon_y = negative_button_y1 + (negative_button_y2 - negative_button_y1 - sprite_get_height(mark_false_sprite)) / 2;
 </string>
           </argument>
         </arguments>
@@ -99,7 +133,34 @@ draw_set_valign(fa_middle);
 
 var xx, yy;
 var list;
-var number_size = 12;
+
+// Negative button
+var negate = false;
+if (keyboard_check(vk_control)) {
+    negate = true;
+} else {
+    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+        if (device_mouse_check_button(mouse_index, mb_left)) {
+            if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
+                if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
+                    //if (device_mouse_x(mouse_index) &gt;= negative_button_x1) {  // Screen border
+                        //if (device_mouse_y(mouse_index) &lt;= negative_button_y2) {  // Screen border
+                            negate = true;
+                        //}
+                    //}
+                }
+            }
+        }
+    }
+}
+if (negate) {
+    draw_set_alpha(0.7);
+} else {
+    draw_set_alpha(0.5);
+}
+draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
+draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
+draw_sprite(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y);
 
 // Draw numbers for colums
 xx = game_area_x2 - field_size2;
@@ -178,7 +239,7 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                             }                        
                         
                             if (!game_field_clicked[field_index_y, field_index_x]) {
-                                if (device_mouse_check_button(mouse_index, mb_left)) {
+                                if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
                                 
                                     if (is_undefined(click_command)) {
                                         if (field_state == 0) {
@@ -201,7 +262,7 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                                     }
                                     
                                     game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
-                                } else if (device_mouse_check_button(mouse_index, mb_right)) {
+                                } else if (device_mouse_check_button(mouse_index, mb_right) || (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; negate)) {
                                 
                                     if (is_undefined(click_command)) {
                                         if (field_state == 0) {
@@ -265,12 +326,12 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                 if (field_index_x &lt; fields_x) {
                     if (game_field[field_index_y, field_index_x] == 1) {
                         n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
-                        draw_sprite_pos(spr_picross_mark, 0, n1.x_target_start + 8, n1.y_target_start + 8, n2.x_target_start - 8, n2.y_target_start + 8, n3.x_target_start - 8, n3.y_target_start - 8, n4.x_target_start + 8, n4.y_target - 8, 0.4);
-                        draw_sprite_pos(spr_picross_mark, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.8);
+                        draw_sprite_pos(mark_sprite, 0, n1.x_target_start + 8, n1.y_target_start + 8, n2.x_target_start - 8, n2.y_target_start + 8, n3.x_target_start - 8, n3.y_target_start - 8, n4.x_target_start + 8, n4.y_target - 8, 0.4);
+                        draw_sprite_pos(mark_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.8);
                     }
                     else if (game_field[field_index_y, field_index_x] == -1) {
                         n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
-                        draw_sprite_pos(spr_picross_mark_false, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 1);
+                        draw_sprite_pos(mark_false_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 1);
                     }
                 }
             }

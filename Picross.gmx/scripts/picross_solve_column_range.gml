@@ -1,6 +1,7 @@
 /// picross_solve_column_range(game_field, column_numbers, field_index_x, field_index_y_start, field_index_y_end)
 // Tries to fill as much fields in a column as possible
 // and returns true if one or more new fields could be set.
+// NOT FINISHED
 // by BadToxic
 
 var game_field, column_numbers, field_index_x, field_index_y_start, field_index_y_end, field_index_y, fields_y;
