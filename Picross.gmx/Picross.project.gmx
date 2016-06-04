@@ -27,6 +27,7 @@
       <script>scripts\picross_create_ui_nodes.gml</script>
       <script>scripts\picross_count_numbers.gml</script>
       <script>scripts\picross_zoom_node.gml</script>
+      <script>scripts\picross_solve_column_range.gml</script>
     </scripts>
   </scripts>
   <objects name="objects">

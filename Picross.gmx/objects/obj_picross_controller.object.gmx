@@ -107,9 +107,14 @@ for (var field_index_x = fields_x - 1; field_index_x &gt;= 0; field_index_x--) {
     
     list = column_numbers[field_index_x];
     yy = game_area_y1 - number_size;
-    for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
-        draw_text(xx, yy, string(list[| number_index]));
+    if (ds_list_empty(list)) {
+        draw_text(xx, yy, "0");
         yy -= number_size;
+    } else {
+        for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
+            draw_text(xx, yy, string(list[| number_index]));
+            yy -= number_size;
+        }
     }
     
     xx -= field_size;
@@ -121,9 +126,14 @@ for (var field_index_y = fields_y - 1; field_index_y &gt;= 0; field_index_y--) {
     
     list = row_numbers[field_index_y];
     xx = game_area_x1 - number_size;
-    for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
-        draw_text(xx, yy, string(list[| number_index]));
+    if (ds_list_empty(list)) {
+        draw_text(xx, yy, "0");
         xx -= number_size;
+    } else {
+        for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
+            draw_text(xx, yy, string(list[| number_index]));
+            xx -= number_size;
+        }
     }
     
     yy -= field_size;
