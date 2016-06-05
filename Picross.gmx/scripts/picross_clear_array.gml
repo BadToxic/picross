@@ -1,4 +1,4 @@
-/// picross_clear_array(array)
+/// picross_clear_array(array2D)
 // Sets all fields to zero.
 // by BadToxic
 

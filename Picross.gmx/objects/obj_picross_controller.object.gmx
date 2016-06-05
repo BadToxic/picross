@@ -48,25 +48,14 @@ ui_nodes = noone;
 
 event_user(0); // Set positions and sizes
 
-// Initialize empty game area
-game_field = picross_create_empty_game_field(fields_x, fields_y);
+game_field = noone;
+game_field_clicked = noone;
+ui_nodes = noone;
+solution = noone;
+row_numbers = noone;
+column_numbers = noone;
 
-// Array to remember if it was clicked
-game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
-click_command = undefined;
-
-// User Interface nodes for graphic effects (obj_picross_ui_node)
-if (use_ui_nodes) {
-    ui_nodes = picross_create_ui_nodes(game_field);
-}
-
-
-// And create a random solution
-solution = picross_generate_random_pattern(fields_x, fields_y);
-
-// Count the numbers to display next to the game area.
-// Stores them in the arrays row_numbers and column_numbers.
-picross_count_numbers(solution);
+picross_start_new_game(); // Create game structures and start
 </string>
           </argument>
         </arguments>
@@ -546,17 +535,43 @@ if (state_changed) {
     <event eventtype="9" enumb="8">
       <action>
         <libid>1</libid>
-        <id>223</id>
+        <id>601</id>
         <kind>0</kind>
         <userelative>0</userelative>
         <isquestion>0</isquestion>
-        <useapplyto>0</useapplyto>
+        <useapplyto>-1</useapplyto>
         <exetype>1</exetype>
-        <functionname>action_current_room</functionname>
+        <functionname>action_execute_script</functionname>
         <codestring></codestring>
         <whoName>self</whoName>
         <relative>0</relative>
         <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>9</kind>
+            <script>picross_start_new_game</script>
+          </argument>
+          <argument>
+            <kind>0</kind>
+            <string></string>
+          </argument>
+          <argument>
+            <kind>0</kind>
+            <string></string>
+          </argument>
+          <argument>
+            <kind>0</kind>
+            <string></string>
+          </argument>
+          <argument>
+            <kind>0</kind>
+            <string></string>
+          </argument>
+          <argument>
+            <kind>0</kind>
+            <string></string>
+          </argument>
+        </arguments>
       </action>
     </event>
   </events>

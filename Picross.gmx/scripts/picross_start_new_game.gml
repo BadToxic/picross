@@ -1,0 +1,57 @@
+/// picross_start_new_game();
+
+
+// Delete old structures
+if (row_numbers != noone) {
+    //var fields_y = array_height_2d(solution);
+
+    // Destroy Numbers for rows
+    for (var field_index_y = fields_y - 1; field_index_y >= 0; field_index_y--) {
+        list = row_numbers[field_index_y];     
+        ds_list_destroy(list);
+    }
+
+    row_numbers = noone;
+}
+if (column_numbers != noone) {
+    //var fields_x = array_length_2d(solution, 0);
+    
+    // Destroy Numbers for colums
+    for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
+        list = column_numbers[field_index_x];        
+        ds_list_destroy(list);
+    }
+    
+    column_numbers = noone;
+}
+with (obj_picross_ui_node) {
+    instance_destroy();
+}
+
+solution = noone;
+ui_nodes = noone;
+game_field_clicked = noone;
+game_field = noone;
+
+
+
+// Initialize empty game area
+game_field = picross_create_empty_game_field(fields_x, fields_y);
+
+// Array to remember if it was clicked
+game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
+click_command = undefined;
+
+// User Interface nodes for graphic effects (obj_picross_ui_node)
+if (use_ui_nodes) {
+    ui_nodes = picross_create_ui_nodes(game_field);
+}
+
+
+// And create a random solution
+solution = picross_generate_random_pattern(fields_x, fields_y);
+
+// Count the numbers to display next to the game area.
+// Stores them in the arrays row_numbers and column_numbers.
+
+picross_count_numbers(solution);
