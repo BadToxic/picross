@@ -9,6 +9,7 @@
     <sprites name="picross">
       <sprite>sprites\spr_picross_mark</sprite>
       <sprite>sprites\spr_picross_mark_false</sprite>
+      <sprite>sprites\spr_picross_arrow_left</sprite>
     </sprites>
   </sprites>
   <backgrounds name="background">

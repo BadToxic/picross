@@ -32,6 +32,10 @@ background_vspeed[0] = -0.1;
 background_hspeed[1] = 0.2;
 background_vspeed[1] = 0.2;
 
+back_arrow_spr = spr_picross_arrow_left;
+mark_sprite = spr_picross_mark;
+mark_false_sprite = spr_picross_mark_false;
+
 use_ui_nodes = true;
 
 view = 0;   // 0: Main Menu, 1: InGame
@@ -137,13 +141,17 @@ game_area_y2 = game_area_y1 + game_area_h;
 game_area_mx = game_area_x1 + game_area_w / 2;
 game_area_my = game_area_y1 + game_area_h / 2;
 
+back_button_x1 = view_xview[0] - 8;
+back_button_y1 = view_yview[0] - 8;
+back_button_x2 = view_xview[0] + negative_button_width;
+back_button_y2 = back_button_x1 + negative_button_width;
+back_button_icon_scale = (negative_button_width - 16) / sprite_get_width(back_arrow_spr);
+back_button_icon_x = back_button_x1 + 8 + negative_button_width / 2;
+back_button_icon_y = back_button_y1 + (back_button_y2 - back_button_y1) / 2;
 
-mark_sprite = spr_picross_mark;
-mark_false_sprite = spr_picross_mark_false;
-
-negative_button_x1 = view_xview[0] - 8;
+negative_button_x1 = back_button_x1;
 negative_button_y1 = view_yview[0] + view_hview[0] / 2;
-negative_button_x2 = view_xview[0] + negative_button_width;
+negative_button_x2 = back_button_x2;
 negative_button_y2 = view_yview[0] + view_hview[0] + 8;
 negative_button_icon_scale = (negative_button_width - 16) / sprite_get_width(mark_false_sprite);
 negative_button_icon_x = negative_button_x1 + 8 + (negative_button_width - negative_button_icon_scale * sprite_get_width(mark_false_sprite)) / 2;
@@ -176,12 +184,129 @@ if (use_ui_nodes) {
         <arguments>
           <argument>
             <kind>1</kind>
+            <string>/// Back button
+if (view &gt; 0) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    
+    var xx, yy;
+    
+    var back = false;
+    if (keyboard_check_pressed(vk_escape) || keyboard_check_pressed(vk_backspace)) {
+        back = true;
+    } else {
+        for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+            if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                if (device_mouse_x(mouse_index) &lt;= back_button_x2) {
+                    if (device_mouse_y(mouse_index) &lt;= back_button_y2) {
+                        back = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    draw_set_alpha(0.7);
+    draw_roundrect_colour(back_button_x1, back_button_y1, back_button_x2, back_button_y2, c_gray, c_dkgray, false);
+    draw_roundrect(back_button_x1, back_button_y1, back_button_x2, back_button_y2, true);
+    draw_set_alpha(1);
+    draw_sprite_ext(back_arrow_spr, 0, back_button_icon_x, back_button_icon_y, back_button_icon_scale, back_button_icon_scale, 0, c_white, draw_get_alpha());
+    
+    if (back) {
+        if (view &gt; 0) {
+            view--;
+            event_user(0); // Recalculate positions and sizes
+        } else {
+            game_end();
+        }
+    }
+    
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
+</string>
+          </argument>
+        </arguments>
+      </action>
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Negative button
+draw_set_halign(fa_center);
+draw_set_valign(fa_middle);
+
+var xx, yy;
+
+var negate = false;
+if (keyboard_check(vk_control)) {
+    negate = true;
+} else {
+    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+        if (device_mouse_check_button(mouse_index, mb_left)) {
+            if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
+                if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
+                    negate = true;
+                }
+            }
+        }
+    }
+}
+if (negate) {
+    draw_set_alpha(0.7);
+} else {
+    draw_set_alpha(0.5);
+}
+draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
+draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
+if (negate) {
+    draw_set_alpha(1);
+} else {
+    draw_set_alpha(0.7);
+}
+draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
+
+draw_set_alpha(1);
+draw_set_halign(fa_left);
+draw_set_valign(fa_top);
+</string>
+          </argument>
+        </arguments>
+      </action>
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
             <string>
 draw_set_halign(fa_center);
 draw_set_valign(fa_middle);
 
 var xx, yy;
-var list;
+var list;// spr_picross_arrow_left
 
 // Negative button
 var negate = false;
