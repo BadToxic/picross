@@ -34,9 +34,13 @@ background_vspeed[1] = 0.2;
 
 use_ui_nodes = true;
 
+view = 0;   // 0: Main Menu, 1: InGame
+
+
 fields_x = 10;
 fields_y = 5;
 hard_lines_all = 5; // Draw hard_lines_all 5 fields for better visual seperation
+ui_nodes = noone;
 
 event_user(0); // Set positions and sizes
 
@@ -48,7 +52,6 @@ game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
 click_command = undefined;
 
 // User Interface nodes for graphic effects (obj_picross_ui_node)
-ui_nodes = noone;
 if (use_ui_nodes) {
     ui_nodes = picross_create_ui_nodes(game_field);
 }
@@ -60,6 +63,32 @@ solution = picross_generate_random_pattern(fields_x, fields_y);
 // Count the numbers to display next to the game area.
 // Stores them in the arrays row_numbers and column_numbers.
 picross_count_numbers(solution);
+</string>
+          </argument>
+        </arguments>
+      </action>
+    </event>
+    <event eventtype="3" enumb="0">
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Check for changing window sizes and display orientations
+if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
+    event_user(0); // Recalculate sizes
+}
 </string>
           </argument>
         </arguments>
@@ -83,29 +112,48 @@ picross_count_numbers(solution);
           <argument>
             <kind>1</kind>
             <string>/// Set positions and sizes
-field_size = 64;
+view_wview[0] = window_get_width();
+view_hview[0] = window_get_height();
+
+negative_button_width = view_wview[0] / 7;
+number_size = 12;
+field_size = round(min((view_wview[0] - 2 * negative_button_width) / fields_x,
+                       (view_hview[0] - negative_button_width) / fields_y));
+
+if (view == 0) {
+    // TODO
+}
+
+
 field_size2 = field_size / 2;
 
-game_area_x1 = 248;
-game_area_y1 = 230;
 game_area_w  = fields_x * field_size;
 game_area_h  = fields_y * field_size;
+game_area_x1 = view_xview[0] + (view_wview[0] - negative_button_width) / 2 - game_area_w / 2 + negative_button_width + 3 * number_size;
+game_area_y1 = view_yview[0] + view_hview[0] / 2 - game_area_h / 2 + 3 * number_size;
 game_area_x2 = game_area_x1 + game_area_w;
 game_area_y2 = game_area_y1 + game_area_h;
 
 game_area_mx = game_area_x1 + game_area_w / 2;
 game_area_my = game_area_y1 + game_area_h / 2;
 
-number_size = 12;
+
 mark_sprite = spr_picross_mark;
 mark_false_sprite = spr_picross_mark_false;
-negative_button_width = 128;
+
 negative_button_x1 = view_xview[0] - 8;
 negative_button_y1 = view_yview[0] + view_hview[0] / 2;
 negative_button_x2 = view_xview[0] + negative_button_width;
 negative_button_y2 = view_yview[0] + view_hview[0] + 8;
-negative_button_icon_x = negative_button_x1 + 10;
-negative_button_icon_y = negative_button_y1 + (negative_button_y2 - negative_button_y1 - sprite_get_height(mark_false_sprite)) / 2;
+negative_button_icon_scale = (negative_button_width - 16) / sprite_get_width(mark_false_sprite);
+negative_button_icon_x = negative_button_x1 + 8 + (negative_button_width - negative_button_icon_scale * sprite_get_width(mark_false_sprite)) / 2;
+negative_button_icon_y = negative_button_y1 + (negative_button_y2 - negative_button_y1 - negative_button_icon_scale * sprite_get_height(mark_false_sprite)) / 2;
+
+if (use_ui_nodes) {
+    if (ui_nodes != noone) {
+        picross_reposition_ui_nodes(game_field);
+    }
+}
 </string>
           </argument>
         </arguments>
@@ -161,7 +209,7 @@ if (negate) {
 }
 draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
 draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
-draw_sprite(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y);
+draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
 
 // Draw numbers for colums
 xx = game_area_x2 - field_size2;
