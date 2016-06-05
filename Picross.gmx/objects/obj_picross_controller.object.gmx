@@ -36,6 +36,7 @@ use_ui_nodes = true;
 
 fields_x = 10;
 fields_y = 5;
+hard_lines_all = 5; // Draw hard_lines_all 5 fields for better visual seperation
 
 event_user(0); // Set positions and sizes
 
@@ -317,12 +318,21 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
             if (field_index_x &lt; fields_x) {
                 n1 = ui_nodes[field_index_y, field_index_x];
                 n2 = ui_nodes[field_index_y, field_index_x + 1];
-                draw_line(n1.x, n1.y, n2.x, n2.y);
+                draw_set_alpha(1);
+                if (field_index_y &gt; 0 &amp;&amp; field_index_y &lt; fields_y - 1 &amp;&amp; field_index_y mod hard_lines_all == 0) {
+                    draw_line_width(n1.x, n1.y, n2.x, n2.y, 3);
+                } else {
+                    draw_line(n1.x, n1.y, n2.x, n2.y);
+                }
             }
             if (field_index_y &lt; fields_y) {
                 n1 = ui_nodes[field_index_y, field_index_x];
                 n4 = ui_nodes[field_index_y + 1, field_index_x];
-                draw_line(n1.x, n1.y, n4.x, n4.y);
+                if (field_index_x &gt; 0 &amp;&amp; field_index_x &lt; fields_x - 1 &amp;&amp; field_index_x mod hard_lines_all == 0) {
+                    draw_line_width(n1.x, n1.y, n4.x, n4.y, 3);
+                } else {
+                    draw_line(n1.x, n1.y, n4.x, n4.y);
+                }
                 if (field_index_x &lt; fields_x) {
                     if (game_field[field_index_y, field_index_x] == 1) {
                         n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
