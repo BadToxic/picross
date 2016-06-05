@@ -209,7 +209,13 @@ if (negate) {
 }
 draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
 draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
+if (negate) {
+    draw_set_alpha(1);
+} else {
+    draw_set_alpha(0.7);
+}
 draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
+draw_set_alpha(1);
 
 // Draw numbers for colums
 xx = game_area_x2 - field_size2;
@@ -346,7 +352,7 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                 draw_set_alpha(0.8);
                 draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_aqua, c_blue, false);
             } else*/ if (field_state == -1) {
-                draw_set_alpha(0.6);
+                draw_set_alpha(0.4);
                 draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_black, c_white, false);
             }
             draw_set_alpha(1);
@@ -389,7 +395,7 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                     }
                     else if (game_field[field_index_y, field_index_x] == -1) {
                         n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
-                        draw_sprite_pos(mark_false_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 1);
+                        draw_sprite_pos(mark_false_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.5);
                     }
                 }
             }
