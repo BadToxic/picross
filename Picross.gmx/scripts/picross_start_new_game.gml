@@ -1,5 +1,9 @@
-/// picross_start_new_game();
+/// picross_start_new_game(fields_x, fields_y);
+// Creates a new game with a game area of the given size.
+// by BadToxic
 
+var new_fields_x = argument0;
+var new_fields_y = argument1;
 
 // Delete old structures
 if (row_numbers != noone) {
@@ -33,7 +37,8 @@ ui_nodes = noone;
 game_field_clicked = noone;
 game_field = noone;
 
-
+fields_x = new_fields_x;
+fields_y = new_fields_y;
 
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);

@@ -22,8 +22,8 @@ for (var node_index_x = nodes_x - 1; node_index_x >= 0; node_index_x--) {
         node.y_target_start = yy;
         node.x_target = xx;
         node.y_target = yy;
-        node.x = xx;
-        node.y = yy;
+        // node.x = xx;
+        // node.y = yy;
         
         yy -= field_size;
     }
