@@ -37,6 +37,8 @@ play_spr = spr_picross_play;
 mark_sprite = spr_picross_mark;
 mark_false_sprite = spr_picross_mark_false;
 
+solved_text = "SOLVED";
+
 use_ui_nodes = true;
 
 view = 0;   // 0: Main Menu, 1: InGame
@@ -84,6 +86,33 @@ picross_start_new_game(fields_x, fields_y); // Create game structures and start
             <string>/// Check for changing window sizes and display orientations
 if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
     event_user(0); // Recalculate sizes
+}
+</string>
+          </argument>
+        </arguments>
+      </action>
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Timer
+if (view &gt; 0) {
+    if (!is_solved) {
+        time += delta_time / 1000000;
+        time_str = seconds_2_time(time);
+    }
 }
 </string>
           </argument>
@@ -542,9 +571,6 @@ for (var field_index_y = fields_y - 1; field_index_y &gt;= 0; field_index_y--) {
     yy -= field_size;
 }
 
-draw_set_halign(fa_left);
-draw_set_valign(fa_top);
-
 var state_changed = false;
 // Handle game area
 xx = game_area_x2;
@@ -567,66 +593,68 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                 click_command = undefined;
             }
             
-            if (device_mouse_x(mouse_index) &gt;= x1) {
-                if (device_mouse_y(mouse_index) &gt;= y1) {
-                    if (device_mouse_x(mouse_index) &lt;= x2 + 1) {
-                        if (device_mouse_y(mouse_index) &lt;= y2 + 1) {
-                        
-                            for (var zoom_index_x = min(field_index_x + 3, fields_x - 1); zoom_index_x &gt;= max(0, field_index_x - 3); zoom_index_x--) {
-                                for (var zoom_index_y = min(field_index_y + 3, fields_y - 1); zoom_index_y &gt;= max(0, field_index_y - 3); zoom_index_y--) {
-                        
-                                    picross_zoom_node(zoom_index_x, zoom_index_y, mouse_index, field_size / 16);
-                                    
-                                }
-                            }                        
-                        
-                            if (!game_field_clicked[field_index_y, field_index_x]) {
-                                if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
-                                
-                                    if (is_undefined(click_command)) {
-                                        if (field_state == 0) {
-                                            click_command = 1;
-                                        } else {
-                                            click_command = 0;
-                                        }
+            if (view &gt; 0 &amp;&amp; !is_solved) { // Only inGame
+                if (device_mouse_x(mouse_index) &gt;= x1) {
+                    if (device_mouse_y(mouse_index) &gt;= y1) {
+                        if (device_mouse_x(mouse_index) &lt;= x2 + 1) {
+                            if (device_mouse_y(mouse_index) &lt;= y2 + 1) {
+                            
+                                for (var zoom_index_x = min(field_index_x + 3, fields_x - 1); zoom_index_x &gt;= max(0, field_index_x - 3); zoom_index_x--) {
+                                    for (var zoom_index_y = min(field_index_y + 3, fields_y - 1); zoom_index_y &gt;= max(0, field_index_y - 3); zoom_index_y--) {
+                            
+                                        picross_zoom_node(zoom_index_x, zoom_index_y, mouse_index, field_size / 16);
+                                        
                                     }
+                                }                        
+                            
+                                if (!game_field_clicked[field_index_y, field_index_x]) {
+                                    if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
                                     
-                                    if (click_command == 0) {
-                                        if (field_state != 0) {
-                                            field_state = 0;
-                                            state_changed = true;
+                                        if (is_undefined(click_command)) {
+                                            if (field_state == 0) {
+                                                click_command = 1;
+                                            } else {
+                                                click_command = 0;
+                                            }
                                         }
-                                    } else if (click_command == 1) {
-                                        if (field_state == 0) {
-                                            field_state = 1;
-                                            state_changed = true;
+                                        
+                                        if (click_command == 0) {
+                                            if (field_state != 0) {
+                                                field_state = 0;
+                                                state_changed = true;
+                                            }
+                                        } else if (click_command == 1) {
+                                            if (field_state == 0) {
+                                                field_state = 1;
+                                                state_changed = true;
+                                            }
                                         }
-                                    }
+                                        
+                                        game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                                    } else if (device_mouse_check_button(mouse_index, mb_right) || (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; negate)) {
                                     
-                                    game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
-                                } else if (device_mouse_check_button(mouse_index, mb_right) || (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; negate)) {
-                                
-                                    if (is_undefined(click_command)) {
-                                        if (field_state == 0) {
-                                            click_command = -1;
-                                        } else {
-                                            click_command = 0;
+                                        if (is_undefined(click_command)) {
+                                            if (field_state == 0) {
+                                                click_command = -1;
+                                            } else {
+                                                click_command = 0;
+                                            }
                                         }
-                                    }
+                                        
+                                        if (click_command == 0) {
+                                            if (field_state != 0) {
+                                                field_state = 0;
+                                                state_changed = true;
+                                            }
+                                        } else if (click_command == -1) {
+                                            if (field_state == 0) {
+                                                field_state = -1;
+                                                state_changed = true;
+                                            }
+                                        }
                                     
-                                    if (click_command == 0) {
-                                        if (field_state != 0) {
-                                            field_state = 0;
-                                            state_changed = true;
-                                        }
-                                    } else if (click_command == -1) {
-                                        if (field_state == 0) {
-                                            field_state = -1;
-                                            state_changed = true;
-                                        }
+                                        game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
                                     }
-                                
-                                    game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
                                 }
                             }
                         }
@@ -694,12 +722,27 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
     }
 }
 
+
+draw_set_valign(fa_top);
 // State changed - check for win
 if (state_changed) {
-    if (picross_check_if_solved(game_field, solution)) {
-        show_message("SOLVED!");
+    is_solved = picross_check_if_solved(game_field, solution);
+    if (is_solved) {
+        repeat(8) {
+            effect_create_above(ef_firework, view_xview[0] + random(view_wview[0]), view_yview[0] + random(view_hview[0]), irandom(2), make_colour_hsv(255, irandom(255), 120));
+        }
     }
 }
+if (is_solved) {
+    draw_text(view_xview[0] + view_wview[0] / 2 - 2, view_yview[0] + 6, solved_text);
+    draw_text_colour(view_xview[0] + view_wview[0] / 2, view_yview[0] + 4, solved_text, c_orange, c_yellow, c_olive, c_yellow, 1);
+}
+
+
+// Draw timer
+draw_set_halign(fa_right);
+draw_text(view_xview[0] + view_wview[0] - 4, view_yview[0] + 4, time_str);
+draw_set_halign(fa_left);
 </string>
           </argument>
         </arguments>

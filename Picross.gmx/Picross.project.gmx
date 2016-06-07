@@ -36,6 +36,7 @@
       <script>scripts\picross_start_new_game.gml</script>
       <script>scripts\picross_choose_random_game_area_size.gml</script>
     </scripts>
+    <script>scripts\seconds_2_time.gml</script>
   </scripts>
   <objects name="objects">
     <objects name="picross">

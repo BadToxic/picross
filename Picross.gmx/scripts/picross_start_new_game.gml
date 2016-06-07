@@ -60,3 +60,7 @@ solution = picross_generate_random_pattern(fields_x, fields_y);
 // Stores them in the arrays row_numbers and column_numbers.
 
 picross_count_numbers(solution);
+
+is_solved = false;
+time = 0;
+time_str = seconds_2_time(time);
