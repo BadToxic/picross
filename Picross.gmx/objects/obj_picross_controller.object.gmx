@@ -26,7 +26,10 @@
           <argument>
             <kind>1</kind>
             <string>/// Initialize game
+version = "2016.06.11";
+author = "BadToxic";
 randomize();
+draw_set_font(fnt_picross_default); // Needed for HTML5
 background_hspeed[0] =  0.1;
 background_vspeed[0] = -0.1;
 background_hspeed[1] = 0.2;
@@ -42,6 +45,18 @@ solved_text = "SOLVED";
 use_ui_nodes = true;
 
 view = 0;   // 0: Main Menu, 1: InGame
+hold_negate = os_browser == browser_not_a_browser; // If true, you have to hold the negate button, else it toggles
+negate = false;
+
+// Controlls
+negate_key = vk_control;
+exit_key = vk_escape;
+back_key = vk_backspace;
+start_key = vk_enter;
+left_key = vk_left;
+right_key = vk_right;
+up_key = vk_up;
+down_key = vk_down;
 
 // Available game area sizes
 game_area_sizes = ds_list_create();
@@ -84,7 +99,13 @@ picross_start_new_game(fields_x, fields_y); // Create game structures and start
           <argument>
             <kind>1</kind>
             <string>/// Check for changing window sizes and display orientations
-if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
+
+if (os_browser != browser_not_a_browser) {
+    if (browser_width != window_get_width() || browser_height != window_get_height()) {
+        event_user(0); // Recalculate sizes
+    } 
+} 
+else if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
     event_user(0); // Recalculate sizes
 }
 </string>
@@ -137,10 +158,16 @@ if (view &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Set positions and sizes
+if (os_browser != browser_not_a_browser) {
+    window_set_size(browser_width, browser_height);
+    window_center();
+}
+
 view_wview[0] = window_get_width();
 view_hview[0] = window_get_height();
 view_wport[0] = view_wview[0];
 view_hport[0] = view_hview[0];
+
 
 surface_resize(application_surface, view_wview[0], view_hview[0]);
 
@@ -209,7 +236,7 @@ size_button_height = round((size_chooser_y2 - size_chooser_y1) / ds_list_size(ga
 size_button_height2 = round(size_button_height / 2);
 
 if (use_ui_nodes) {
-    if (ui_nodes != noone) {
+    if (is_array(ui_nodes)) {
         picross_reposition_ui_nodes(game_field);
     }
 }
@@ -242,6 +269,33 @@ if (view == 0) {
     /*if (surface_exists(application_surface)) {
         draw_text(2, 2, string(surface_get_width(application_surface)) + " x " + string(surface_get_height(application_surface)));
     }*/    
+    
+    // Choose game area size via keyboard
+    if (keyboard_check_pressed(left_key)) {
+        var size_index = ds_list_find_index(game_area_sizes, fields_x);
+        if (size_index &gt; 0) {
+            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index - 1), fields_y);
+            event_user(0); // Match sizes to new game area
+        }
+    } else if (keyboard_check_pressed(right_key)) {
+        var size_index = ds_list_find_index(game_area_sizes, fields_x);
+        if (size_index &lt; ds_list_size(game_area_sizes) - 1) {
+            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index + 1), fields_y);
+            event_user(0); // Match sizes to new game area
+        }
+    } else if (keyboard_check_pressed(up_key)) {
+        var size_index = ds_list_find_index(game_area_sizes, fields_y);
+        if (size_index &gt; 0) {
+            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index - 1));
+            event_user(0); // Match sizes to new game area
+        }
+    } else if (keyboard_check_pressed(down_key)) {
+        var size_index = ds_list_find_index(game_area_sizes, fields_y);
+        if (size_index &lt; ds_list_size(game_area_sizes) - 1) {
+            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index + 1));
+            event_user(0); // Match sizes to new game area
+        }
+    }
     
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
@@ -321,8 +375,10 @@ if (view == 0) {
     var xx, yy;
     
     var play = false;
-    if (keyboard_check_pressed(vk_escape) || keyboard_check_pressed(vk_backspace)) {
+    if (keyboard_check_pressed(exit_key) || keyboard_check_pressed(back_key)) {
         back = true;
+    } else if (keyboard_check_pressed(start_key)) {
+        play = true;
     } else {
         for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
             if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
@@ -348,6 +404,7 @@ if (view == 0) {
     if (play) {
         if (view == 0) {
             view++;
+            mouse_clear(mb_left);
             event_user(0); // Recalculate positions and sizes
         }
     }
@@ -436,21 +493,30 @@ if (view &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Negative button
-draw_set_halign(fa_center);
-draw_set_valign(fa_middle);
-
-var xx, yy;
-
-var negate = false;
-if (keyboard_check(vk_control)) {
-    negate = true;
+if (hold_negate) {
+    negate = false; // Reset it every frame
+}
+if (keyboard_check(negate_key)) {
+    if (hold_negate) {
+        negate = true;
+    } else if (keyboard_check_pressed(negate_key)) {
+        negate = !negate;
+    }
 } else {
     for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-        if (device_mouse_check_button(mouse_index, mb_left)) {
-            if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
-                if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
-                    negate = true;
-                }
+        if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
+            if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
+                //if (device_mouse_x(mouse_index) &gt;= negative_button_x1) {  // Screen border
+                    //if (device_mouse_y(mouse_index) &lt;= negative_button_y2) {  // Screen border
+                        if (device_mouse_check_button(mouse_index, mb_left)) {
+                            if (hold_negate) {
+                                negate = true;
+                            } else if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                                negate = !negate;
+                            }
+                        }
+                    //}
+                //}
             }
         }
     }
@@ -468,10 +534,7 @@ if (negate) {
     draw_set_alpha(0.7);
 }
 draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
-
 draw_set_alpha(1);
-draw_set_halign(fa_left);
-draw_set_valign(fa_top);
 </string>
           </argument>
         </arguments>
@@ -499,39 +562,6 @@ draw_set_valign(fa_middle);
 var xx, yy;
 var list;// spr_picross_arrow_left
 
-// Negative button
-var negate = false;
-if (keyboard_check(vk_control)) {
-    negate = true;
-} else {
-    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-        if (device_mouse_check_button(mouse_index, mb_left)) {
-            if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
-                if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
-                    //if (device_mouse_x(mouse_index) &gt;= negative_button_x1) {  // Screen border
-                        //if (device_mouse_y(mouse_index) &lt;= negative_button_y2) {  // Screen border
-                            negate = true;
-                        //}
-                    //}
-                }
-            }
-        }
-    }
-}
-if (negate) {
-    draw_set_alpha(0.7);
-} else {
-    draw_set_alpha(0.5);
-}
-draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
-draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
-if (negate) {
-    draw_set_alpha(1);
-} else {
-    draw_set_alpha(0.7);
-}
-draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
-draw_set_alpha(1);
 
 // Draw numbers for colums
 xx = game_area_x2 - field_size2;
@@ -742,7 +772,12 @@ if (is_solved) {
 // Draw timer
 draw_set_halign(fa_right);
 draw_text(view_xview[0] + view_wview[0] - 4, view_yview[0] + 4, time_str);
+// Draw author and version date
+draw_set_halign(fa_center);
+draw_set_valign(fa_bottom);
+draw_text(view_xview[0] + view_wview[0] / 2, view_yview[0] + view_hview[0] - 2, author + " - " + version);
 draw_set_halign(fa_left);
+draw_set_valign(fa_top);
 </string>
           </argument>
         </arguments>

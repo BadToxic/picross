@@ -6,7 +6,7 @@ var new_fields_x = argument0;
 var new_fields_y = argument1;
 
 // Delete old structures
-if (row_numbers != noone) {
+if (is_array(row_numbers)) {
     //var fields_y = array_height_2d(solution);
 
     // Destroy Numbers for rows
@@ -17,7 +17,7 @@ if (row_numbers != noone) {
 
     row_numbers = noone;
 }
-if (column_numbers != noone) {
+if (is_array(column_numbers)) {
     //var fields_x = array_length_2d(solution, 0);
     
     // Destroy Numbers for colums

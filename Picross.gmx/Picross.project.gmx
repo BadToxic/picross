@@ -38,6 +38,11 @@
     </scripts>
     <script>scripts\seconds_2_time.gml</script>
   </scripts>
+  <fonts name="fonts">
+    <fonts name="picross">
+      <font>fonts\fnt_picross_default</font>
+    </fonts>
+  </fonts>
   <objects name="objects">
     <objects name="picross">
       <object>objects\obj_picross_controller</object>
