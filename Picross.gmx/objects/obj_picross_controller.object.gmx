@@ -26,7 +26,7 @@
           <argument>
             <kind>1</kind>
             <string>/// Initialize game
-version = "2016.06.11";
+version = "2016.06.12";
 author = "BadToxic";
 randomize();
 draw_set_font(fnt_picross_default); // Needed for HTML5
@@ -47,6 +47,8 @@ use_ui_nodes = true;
 view = 0;   // 0: Main Menu, 1: InGame
 hold_negate = os_browser == browser_not_a_browser; // If true, you have to hold the negate button, else it toggles
 negate = false;
+blink_counter = 0;   // For animating blinking sprites
+buttons_blocked = 0; // Can be used to block buttons for some frames after use
 
 // Controlls
 negate_key = vk_control;
@@ -101,12 +103,16 @@ picross_start_new_game(fields_x, fields_y); // Create game structures and start
             <string>/// Check for changing window sizes and display orientations
 
 if (os_browser != browser_not_a_browser) {
-    if (browser_width != window_get_width() || browser_height != window_get_height()) {
-        event_user(0); // Recalculate sizes
-    } 
+    if (browser_width &gt; 0 &amp;&amp; browser_height &gt; 0) {
+        if (browser_width != window_get_width() || browser_height != window_get_height()) {
+            event_user(0); // Recalculate sizes
+        }
+    }
 } 
-else if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
-    event_user(0); // Recalculate sizes
+else if (window_get_width() &gt; 0 &amp;&amp; window_get_height() &gt; 0) {
+    if (view_wview[0] != window_get_width() || view_hview[0] != window_get_height()) {
+        event_user(0); // Recalculate sizes
+    }
 }
 </string>
           </argument>
@@ -128,11 +134,18 @@ else if (view_wview[0] != window_get_width() || view_hview[0] != window_get_heig
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>/// Timer
+            <string>/// Timer &amp; Button Blocker
 if (view &gt; 0) {
     if (!is_solved) {
         time += delta_time / 1000000;
         time_str = seconds_2_time(time);
+    }
+} else {
+    blink_counter += delta_time / 500000;
+}
+if (buttons_blocked &gt; 0) {
+    if (!mouse_check_button(mb_left)) {
+        buttons_blocked--;
     }
 }
 </string>
@@ -188,11 +201,11 @@ game_area_h  = fields_y * field_size;
 
 if (view == 0) {
     // Mini game area in main menu
-    game_area_x1 = round(view_xview[0] + view_wview[0] - negative_button_width / 2 - game_area_w);
-    game_area_y1 = round(view_yview[0] + view_hview[0] - game_area_h - negative_button_width / 2 + 3 * number_size);
+    game_area_x1 = round(view_xview[0] + view_wview[0] * 0.75 - game_area_w / 2);
+    game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
 } else {
     game_area_x1 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2 - game_area_w / 2 + negative_button_width + 3 * number_size);
-    game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 3 * number_size);
+    game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
 }
 
 game_area_x2 = game_area_x1 + game_area_w;
@@ -226,7 +239,7 @@ negative_button_icon_scale = (negative_button_width - 16) / sprite_get_width(mar
 negative_button_icon_x = round(negative_button_x1 + 8 + (negative_button_width - negative_button_icon_scale * sprite_get_width(mark_false_sprite)) / 2);
 negative_button_icon_y = round(negative_button_y1 + (negative_button_y2 - negative_button_y1 - negative_button_icon_scale * sprite_get_height(mark_false_sprite)) / 2);
 
-size_chooser_x1 = round(negative_button_x2 + negative_button_width / 2);
+size_chooser_x1 = round(negative_button_width / 2);
 size_chooser_y1 = play_button_y1;
 size_chooser_x2 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2);
 size_chooser_y2 = round(view_yview[0] + view_hview[0] - negative_button_width / 2);
@@ -382,10 +395,10 @@ if (view == 0) {
     } else {
         for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
             if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                if (device_mouse_x(mouse_index) &gt;= play_button_x1) {
-                    if (device_mouse_y(mouse_index) &gt;= play_button_y1) {
-                        if (device_mouse_x(mouse_index) &lt;= play_button_x2) {
-                            if (device_mouse_y(mouse_index) &lt;= play_button_y2) {
+                if (device_mouse_x(mouse_index) &gt;= game_area_x1) {
+                    if (device_mouse_y(mouse_index) &gt;= game_area_y1) {
+                        if (device_mouse_x(mouse_index) &lt;= game_area_x2) {
+                            if (device_mouse_y(mouse_index) &lt;= game_area_y2) {
                                 play = true;
                             }
                         }
@@ -395,16 +408,16 @@ if (view == 0) {
         }
     }
     
-    draw_set_alpha(0.7);
+    /*draw_set_alpha(0.7);
     draw_roundrect_colour(play_button_x1, play_button_y1, play_button_x2, play_button_y2, c_gray, c_dkgray, false);
     draw_roundrect(play_button_x1, play_button_y1, play_button_x2, play_button_y2, true);
-    draw_set_alpha(1);
-    draw_sprite_ext(play_spr, 0, play_button_icon_x, play_button_icon_y, play_button_icon_scale, play_button_icon_scale, 0, c_white, draw_get_alpha());
+    draw_set_alpha(1);*/
+    draw_sprite_ext(play_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, play_button_icon_scale, play_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
     
     if (play) {
         if (view == 0) {
             view++;
-            mouse_clear(mb_left);
+            buttons_blocked = 2;
             event_user(0); // Recalculate positions and sizes
         }
     }
@@ -493,48 +506,52 @@ if (view &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Negative button
-if (hold_negate) {
-    negate = false; // Reset it every frame
-}
-if (keyboard_check(negate_key)) {
+if (view &gt; 0) {
     if (hold_negate) {
-        negate = true;
-    } else if (keyboard_check_pressed(negate_key)) {
-        negate = !negate;
+        negate = false; // Reset it every frame
     }
-} else {
-    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-        if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
-            if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
-                //if (device_mouse_x(mouse_index) &gt;= negative_button_x1) {  // Screen border
-                    //if (device_mouse_y(mouse_index) &lt;= negative_button_y2) {  // Screen border
-                        if (device_mouse_check_button(mouse_index, mb_left)) {
-                            if (hold_negate) {
-                                negate = true;
-                            } else if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                                negate = !negate;
+    if (keyboard_check(negate_key)) {
+        if (hold_negate) {
+            negate = true;
+        } else if (keyboard_check_pressed(negate_key)) {
+            negate = !negate;
+        }
+    } else {
+        for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+            if (device_mouse_x(mouse_index) &lt;= negative_button_x2) {
+                if (device_mouse_y(mouse_index) &gt;= negative_button_y1) {
+                    //if (device_mouse_x(mouse_index) &gt;= negative_button_x1) {  // Screen border
+                        //if (device_mouse_y(mouse_index) &lt;= negative_button_y2) {  // Screen border
+                            if (device_mouse_check_button(mouse_index, mb_left)) {
+                                if (hold_negate) {
+                                    negate = true;
+                                } else if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                                    negate = !negate;
+                                }
                             }
-                        }
+                        //}
                     //}
-                //}
+                }
             }
         }
     }
-}
-if (negate) {
-    draw_set_alpha(0.7);
-} else {
-    draw_set_alpha(0.5);
-}
-draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
-draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
-if (negate) {
+    if (negate) {
+        negate_button_spr = mark_false_sprite;
+        draw_set_alpha(0.7);
+    } else {
+        negate_button_spr = mark_sprite;
+        draw_set_alpha(0.5);
+    }
+    draw_roundrect_colour(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, c_gray, c_dkgray, false);
+    draw_roundrect(negative_button_x1, negative_button_y1, negative_button_x2, negative_button_y2, true);
+    if (negate) {
+        draw_set_alpha(1);
+    } else {
+        draw_set_alpha(0.7);
+    }
+    draw_sprite_ext(negate_button_spr, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
     draw_set_alpha(1);
-} else {
-    draw_set_alpha(0.7);
 }
-draw_sprite_ext(mark_false_sprite, 0, negative_button_icon_x, negative_button_icon_y, negative_button_icon_scale, negative_button_icon_scale, 0, c_white, draw_get_alpha());
-draw_set_alpha(1);
 </string>
           </argument>
         </arguments>
@@ -637,7 +654,7 @@ for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
                                     }
                                 }                        
                             
-                                if (!game_field_clicked[field_index_y, field_index_x]) {
+                                if (!game_field_clicked[field_index_y, field_index_x] &amp;&amp; buttons_blocked &lt;= 0) {
                                     if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
                                     
                                         if (is_undefined(click_command)) {

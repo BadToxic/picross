@@ -78,7 +78,7 @@ y_target = y_target_start;
             <kind>1</kind>
             <string>/// Move to target position
 if (x != x_target || y != y_target) {
-    if (point_distance(x, y, x_target, y_target) &lt;= 5) {
+    if (point_distance(x, y, x_target, y_target) &lt;= 6) {
         x = x_target;
         y = y_target;
         speed = 0;
