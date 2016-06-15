@@ -42,6 +42,7 @@ fields_y = new_fields_y;
 
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);
+game_field_marks = 0; // Number of marks the current game area has
 
 // Array to remember if it was clicked
 game_field_clicked = picross_create_empty_game_field(fields_x, fields_y);
@@ -55,6 +56,7 @@ if (use_ui_nodes) {
 
 // And create a random solution
 solution = picross_generate_random_pattern(fields_x, fields_y);
+solution_marks = picross_count_marks(solution); // Number of marks the solution has
 
 // Count the numbers to display next to the game area.
 // Stores them in the arrays row_numbers and column_numbers.

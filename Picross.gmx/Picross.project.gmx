@@ -26,6 +26,7 @@
     <scripts name="picross">
       <script>scripts\picross_create_empty_game_field.gml</script>
       <script>scripts\picross_generate_random_pattern.gml</script>
+      <script>scripts\picross_count_marks.gml</script>
       <script>scripts\picross_check_if_solved.gml</script>
       <script>scripts\picross_clear_array.gml</script>
       <script>scripts\picross_create_ui_nodes.gml</script>

@@ -10,7 +10,7 @@ solution = argument0;
 fields_x = array_length_2d(solution, 0);
 fields_y = array_height_2d(solution);
 
-// Get Numbers for colums
+// Get numbers for colums
 for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
 
     count = 0;
@@ -35,7 +35,7 @@ for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
     column_numbers[field_index_x] = list;
 }
 
-// Get Numbers for rows
+// Get numbers for rows
 for (var field_index_y = fields_y - 1; field_index_y >= 0; field_index_y--) {
 
     count = 0;
