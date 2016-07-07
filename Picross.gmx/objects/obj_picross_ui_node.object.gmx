@@ -78,12 +78,13 @@ y_target = y_target_start;
             <kind>1</kind>
             <string>/// Move to target position
 if (x != x_target || y != y_target) {
-    if (point_distance(x, y, x_target, y_target) &lt;= 6) {
+    var dist = point_distance(x, y, x_target, y_target);
+    if (dist &lt;= 6) {
         x = x_target;
         y = y_target;
         speed = 0;
     } else {
-        move_towards_point(x_target, y_target, 5);
+        move_towards_point(x_target, y_target, max(5, dist * delta_time / 100000));
     }
 }
 </string>

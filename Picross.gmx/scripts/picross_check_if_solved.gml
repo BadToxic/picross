@@ -36,7 +36,7 @@ for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
         if (game_field[field_index_y, field_index_x] != 1 || field_index_y == 0) {
             if (count > 0) { // Check the number
                 if (count != list[|index]) {
-                    show_message("colums count != list[|index] - count=" + string(count) + ", index=" + string(index) + ", list[|index]=" + string(list[|index]) + ", field_index_x=" + string(field_index_x) + ", field_index_y=" + string(field_index_y));
+                    // show_message("colums count != list[|index] - count=" + string(count) + ", index=" + string(index) + ", list[|index]=" + string(list[|index]) + ", field_index_x=" + string(field_index_x) + ", field_index_y=" + string(field_index_y));
                     return false;
                 }
                 index--;
@@ -46,7 +46,7 @@ for (var field_index_x = fields_x - 1; field_index_x >= 0; field_index_x--) {
     }
     
     if (index >= 0) {
-        show_message("colums index >= 0 - count=" + string(count) + ", index=" + string(index));
+        // show_message("colums index >= 0 - count=" + string(count) + ", index=" + string(index));
         return false; // It's a wrong number of numbers
     }
 }
@@ -69,7 +69,7 @@ for (var field_index_y = fields_y - 1; field_index_y >= 0; field_index_y--) {
         if (game_field[field_index_y, field_index_x] != 1 || field_index_x == 0) {
             if (count > 0) { // Check the number
                 if (count != list[|index]) {
-                    show_message("rows count != list[|index] - count=" + string(count) + ", index=" + string(index) + ", list[|index]=" + string(list[|index]) + ", field_index_x=" + string(field_index_x) + ", field_index_y=" + string(field_index_y));
+                    // show_message("rows count != list[|index] - count=" + string(count) + ", index=" + string(index) + ", list[|index]=" + string(list[|index]) + ", field_index_x=" + string(field_index_x) + ", field_index_y=" + string(field_index_y));
                     return false;
                 }
                 index--;
@@ -79,7 +79,7 @@ for (var field_index_y = fields_y - 1; field_index_y >= 0; field_index_y--) {
     }
     
     if (index >= 0) {
-        show_message("rows index >= 0 - count=" + string(count) + ", index=" + string(index));
+        // show_message("rows index >= 0 - count=" + string(count) + ", index=" + string(index));
         return false; // It's a wrong number of numbers
     }
 }

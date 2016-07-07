@@ -1,9 +1,11 @@
-/// picross_start_new_game(fields_x, fields_y);
+/// picross_start_new_game(fields_x, fields_y, solution);
 // Creates a new game with a game area of the given size.
+// If a solution is given it will be used. Otherwise a random pattern will be created
 // by BadToxic
 
 var new_fields_x = argument0;
 var new_fields_y = argument1;
+var _solution    = argument2;
 
 // Delete old structures
 if (is_array(row_numbers)) {
@@ -37,8 +39,16 @@ ui_nodes = noone;
 game_field_clicked = noone;
 game_field = noone;
 
-fields_x = new_fields_x;
-fields_y = new_fields_y;
+if (!is_array(_solution)) {
+    fields_x = new_fields_x;
+    fields_y = new_fields_y;
+    // And create a random solution
+    solution = picross_generate_random_pattern(fields_x, fields_y);
+} else {
+    fields_x = array_length_2d(_solution, 0);
+    fields_y = array_height_2d(_solution);
+    solution = _solution;
+}
 
 // Initialize empty game area
 game_field = picross_create_empty_game_field(fields_x, fields_y);
@@ -53,9 +63,6 @@ if (use_ui_nodes) {
     ui_nodes = picross_create_ui_nodes(game_field);
 }
 
-
-// And create a random solution
-solution = picross_generate_random_pattern(fields_x, fields_y);
 solution_marks = picross_count_marks(solution); // Number of marks the solution has
 
 // Count the numbers to display next to the game area.

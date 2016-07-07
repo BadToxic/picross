@@ -36,12 +36,17 @@
       <script>scripts\picross_solve_column_range.gml</script>
       <script>scripts\picross_start_new_game.gml</script>
       <script>scripts\picross_choose_random_game_area_size.gml</script>
+      <script>scripts\picross_save_pattern.gml</script>
+      <script>scripts\picross_load_pattern.gml</script>
+      <script>scripts\picross_load_puzzle.gml</script>
+      <script>scripts\picross_get_puzzle_files.gml</script>
     </scripts>
     <script>scripts\seconds_2_time.gml</script>
   </scripts>
   <fonts name="fonts">
     <fonts name="picross">
       <font>fonts\fnt_picross_default</font>
+      <font>fonts\fnt_picross_big_numbers</font>
     </fonts>
   </fonts>
   <objects name="objects">

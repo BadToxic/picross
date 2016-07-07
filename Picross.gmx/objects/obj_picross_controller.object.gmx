@@ -26,8 +26,10 @@
           <argument>
             <kind>1</kind>
             <string>/// Initialize game
-version = "2016.06.13";
+version = "2016.07.07";
 author = "BadToxic";
+base_folder = /*working_directory +*/ "picross/"
+puzzle_folder = base_folder + "puzzles/";
 randomize();
 draw_set_font(fnt_picross_default); // Needed for HTML5
 background_index[0] = back_picross_0;
@@ -46,11 +48,20 @@ play_spr = spr_picross_play;
 mark_sprite = spr_picross_mark;
 mark_false_sprite = spr_picross_mark_false;
 
+VIEW_TITLE     = 0;
+VIEW_MAIN_MENU = 1;
+VIEW_PUZZLES   = 2;
+VIEW_RANDOM    = 3;
+VIEW_INGAME    = 4;
+
 solved_text = "SOLVED";
+puzzle_text = "PUZZLES";
+random_text = "RANDOM";
 
 use_ui_nodes = true;
 
-view = 0;   // 0: Main Menu, 1: InGame
+view = VIEW_MAIN_MENU;   // Main Menu, Random, InGame, ...
+view_previous = view; // Remember where I come from
 hold_negate = os_browser == browser_not_a_browser; // If true, you have to hold the negate button, else it toggles
 negate = false;
 blink_counter = 0;   // For animating blinking sprites
@@ -69,10 +80,21 @@ down_key = vk_down;
 // Available game area sizes
 game_area_sizes = ds_list_create();
 ds_list_add(game_area_sizes, 5, 7, 10, 15, 20);
+game_area_x1 = 0;
+game_area_y1 = 0;
+game_area_x2 = 0;
+game_area_y2 = 0;
+game_area_w  = 0;
+game_area_h  = 0;
+game_area_mx = 0;
+game_area_my = 0;
+field_size   = 0;
 
 picross_choose_random_game_area_size();
 hard_lines_all = 5; // Draw hard_lines_all 5 fields for better visual seperation
 ui_nodes = noone;
+
+number_font = fnt_picross_default;
 
 event_user(0); // Set positions and sizes
 
@@ -85,7 +107,11 @@ solution_marks = 0; // Number of marks the solution has
 row_numbers = noone;
 column_numbers = noone;
 
-picross_start_new_game(fields_x, fields_y); // Create game structures and start
+fname_async_id = -1; // Asynchronous Dialog ID for entering filename
+
+puzzle_files = picross_get_puzzle_files();
+
+// picross_start_new_game(fields_x, fields_y, noone); // Create game structures and start
 </string>
           </argument>
         </arguments>
@@ -143,17 +169,66 @@ else if (window_get_width() &gt; 0 &amp;&amp; window_get_height() &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Timer &amp; Button Blocker
-if (view &gt; 0) {
+if (view == VIEW_INGAME) {
     if (!is_solved) {
         time += delta_time / 1000000;
         time_str = seconds_2_time(time);
     }
-} else {
+} else if (view == VIEW_RANDOM) {
     blink_counter += delta_time / 500000;
 }
 if (buttons_blocked &gt; 0) {
     if (!mouse_check_button(mb_left)) {
         buttons_blocked--;
+    }
+}
+</string>
+          </argument>
+        </arguments>
+      </action>
+    </event>
+    <event eventtype="7" enumb="63">
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Get file name for saving puzzle
+var async_id = ds_map_find_value(async_load, "id");
+
+if (async_id == fname_async_id) {
+    if (ds_map_find_value(async_load, "status")) {
+    
+        var fname = ds_map_find_value(async_load, "result");
+        fname = string_replace_all(fname, " ", "_");
+        fname = string_replace_all(fname, ":", ".");
+        if (fname != "") {
+            var size = string(array_length_2d(game_field, 0));
+            size += "x" + string(array_height_2d(game_field));
+            
+            var final_fname = size + "_" + fname + ".pic";
+            
+            picross_save_pattern(puzzle_folder + final_fname);
+            
+            if (ds_list_find_index(puzzle_files, final_fname)) {
+                show_debug_message("(File already existed and was overwritten.)");
+            } else {
+                // Add file to file list
+                ds_list_add(puzzle_files, final_fname);
+            }
+            
+        }
     }
 }
 </string>
@@ -189,76 +264,125 @@ view_hview[0] = window_get_height();
 view_wport[0] = view_wview[0];
 view_hport[0] = view_hview[0];
 
+var dimension = min(view_wview[0], view_hview[0]);
+if (dimension &gt; 1024) {
+    number_font = fnt_picross_big_numbers;
+    number_size = 21;
+} else {
+    number_font = fnt_picross_default;
+    if (dimension &gt; 600) {
+        number_size = 15;
+    } else {
+        number_size = 12;
+    }
+}
 
 surface_resize(application_surface, view_wview[0], view_hview[0]);
 
-negative_button_width = round(view_wview[0] / 7);
-number_size = 12;
-field_size = round(min((view_wview[0] - 2 * negative_button_width) / fields_x,
-                       (view_hview[0] - negative_button_width) / fields_y));
-
-if (view == 0) { // Only the half size in the main menu
-    field_size = field_size / 2;
-}
-
-
-field_size2 = field_size / 2;
-
-game_area_w  = fields_x * field_size;
-game_area_h  = fields_y * field_size;
-
-if (view == 0) {
-    // Mini game area in main menu
-    game_area_x1 = round(view_xview[0] + view_wview[0] * 0.75 - game_area_w / 2);
-    game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
+if (view == VIEW_TITLE) {
+    
+    // Not implemented yet
+    
+} else if (view == VIEW_MAIN_MENU) {
+    
+    puzzle_button_width = round(view_wview[0] / 2);
+    puzzle_button_height = round(view_hview[0] / 4);
+    puzzle_button_x1 = round(view_xview[0] + 0.5 * view_wview[0] - puzzle_button_width / 2);
+    puzzle_button_y1 = round(view_yview[0] + 0.3 * view_hview[0] - puzzle_button_height / 2);
+    puzzle_button_x2 = puzzle_button_x1 + puzzle_button_width;
+    puzzle_button_y2 = puzzle_button_y1 + puzzle_button_height;
+    
+    random_button_width = puzzle_button_width;
+    random_button_height = puzzle_button_height;
+    random_button_x1 = puzzle_button_x1;
+    random_button_y1 = round(view_yview[0] + view_hview[0] - 0.3 * view_hview[0] - random_button_height / 2);
+    random_button_x2 = puzzle_button_x2;
+    random_button_y2 = random_button_y1 + random_button_height;
+    /* random_button_icon_scale = random_button_size / sprite_get_width(random_spr);
+    random_button_icon_x = round(random_button_x1 + random_button_width / 2);
+    random_button_icon_y = round(random_button_y1 + random_button_height / 2); */
+    
 } else {
-    game_area_x1 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2 - game_area_w / 2 + negative_button_width + 3 * number_size);
-    game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
-}
-
-game_area_x2 = game_area_x1 + game_area_w;
-game_area_y2 = game_area_y1 + game_area_h;
-
-game_area_mx = round(game_area_x1 + game_area_w / 2);
-game_area_my = round(game_area_y1 + game_area_h / 2);
-
-play_button_size = round(min(view_wview[0] / 2 - negative_button_width, view_hview[0] / 2 - negative_button_width));
-play_button_x1 = round(view_xview[0] + 0.75 * view_wview[0] - play_button_size / 2);
-play_button_y1 = round(view_yview[0] + 0.25 * view_hview[0] - play_button_size / 2);
-play_button_x2 = play_button_x1 + play_button_size;
-play_button_y2 = play_button_y1 + play_button_size;
-play_button_icon_scale = play_button_size / sprite_get_width(play_spr);
-play_button_icon_x = round(play_button_x1 + play_button_size / 2);
-play_button_icon_y = round(play_button_y1 + play_button_size / 2);
-
-back_button_x1 = view_xview[0] - 8;
-back_button_y1 = view_yview[0] - 8;
-back_button_x2 = view_xview[0] + negative_button_width;
-back_button_y2 = back_button_x1 + negative_button_width;
-back_button_icon_scale = (negative_button_width - 16) / sprite_get_width(back_arrow_spr);
-back_button_icon_x = round(back_button_x1 + 8 + negative_button_width / 2);
-back_button_icon_y = round(back_button_y1 + (back_button_y2 - back_button_y1) / 2);
-
-negative_button_x1 = back_button_x1;
-negative_button_y1 = round(view_yview[0] + view_hview[0] / 2);
-negative_button_x2 = back_button_x2;
-negative_button_y2 = view_yview[0] + view_hview[0] + 8;
-negative_button_icon_scale = (negative_button_width - 16) / sprite_get_width(mark_false_sprite);
-negative_button_icon_x = round(negative_button_x1 + 8 + (negative_button_width - negative_button_icon_scale * sprite_get_width(mark_false_sprite)) / 2);
-negative_button_icon_y = round(negative_button_y1 + (negative_button_y2 - negative_button_y1 - negative_button_icon_scale * sprite_get_height(mark_false_sprite)) / 2);
-
-size_chooser_x1 = round(negative_button_width / 2);
-size_chooser_y1 = play_button_y1;
-size_chooser_x2 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2);
-size_chooser_y2 = round(view_yview[0] + view_hview[0] - negative_button_width / 2);
-size_button_width = round((size_chooser_x2 - size_chooser_x1) / 2);
-size_button_width2 = round(size_button_width / 2);
-size_button_height = round((size_chooser_y2 - size_chooser_y1) / ds_list_size(game_area_sizes));
-size_button_height2 = round(size_button_height / 2);
-
-if (use_ui_nodes) {
-    if (is_array(ui_nodes)) {
-        picross_reposition_ui_nodes(game_field);
+    negative_button_width = round(view_wview[0] / 7);
+    
+    back_button_x1 = view_xview[0] - 8;
+    back_button_y1 = view_yview[0] - 8;
+    back_button_x2 = view_xview[0] + negative_button_width;
+    back_button_y2 = back_button_x1 + negative_button_width;
+    back_button_icon_scale = (negative_button_width - 16) / sprite_get_width(back_arrow_spr);
+    back_button_icon_x = round(back_button_x1 + 8 + negative_button_width / 2);
+    back_button_icon_y = round(back_button_y1 + (back_button_y2 - back_button_y1) / 2);
+        
+    if (view == VIEW_PUZZLES) {
+        
+        puzzle_button_width = round(view_wview[0] / 2);
+        puzzle_button_height = 32;
+        puzzle_button_x1 = round(view_xview[0] + 0.5 * view_wview[0] - puzzle_button_width / 2);
+        puzzle_button_y1 = view_yview[0] + puzzle_button_height;
+        puzzle_button_x2 = puzzle_button_x1 + puzzle_button_width;
+        puzzle_button_y2 = puzzle_button_y1 + puzzle_button_height;
+        
+    } else if (view == VIEW_RANDOM || view == VIEW_INGAME) {
+    
+        field_size = round(min((view_wview[0] - 2 * negative_button_width) / fields_x,
+                               (view_hview[0] - negative_button_width) / fields_y));
+        
+        if (view == VIEW_RANDOM) { // Only the half size in the (random) menu
+            field_size = field_size / 2;
+        }
+        
+        
+        field_size2 = field_size / 2;
+        
+        game_area_w  = fields_x * field_size;
+        game_area_h  = fields_y * field_size;
+        
+        if (view == VIEW_RANDOM) {
+            // Mini game area in main menu
+            game_area_x1 = round(view_xview[0] + view_wview[0] * 0.75 - game_area_w / 2);
+            game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
+        } else if (view == VIEW_INGAME) {
+            game_area_x1 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2 - game_area_w / 2 + negative_button_width + 3 * number_size);
+            game_area_y1 = round(view_yview[0] + (view_hview[0] - game_area_h) / 2 + 2.5 * number_size);
+        }
+        
+        game_area_x2 = game_area_x1 + game_area_w;
+        game_area_y2 = game_area_y1 + game_area_h;
+        
+        game_area_mx = round(game_area_x1 + game_area_w / 2);
+        game_area_my = round(game_area_y1 + game_area_h / 2);
+        
+        play_button_size = round(min(view_wview[0] / 2 - negative_button_width, view_hview[0] / 2 - negative_button_width));
+        play_button_x1 = round(view_xview[0] + 0.75 * view_wview[0] - play_button_size / 2);
+        play_button_y1 = round(view_yview[0] + 0.25 * view_hview[0] - play_button_size / 2);
+        play_button_x2 = play_button_x1 + play_button_size;
+        play_button_y2 = play_button_y1 + play_button_size;
+        play_button_icon_scale = play_button_size / sprite_get_width(play_spr);
+        play_button_icon_x = round(play_button_x1 + play_button_size / 2);
+        play_button_icon_y = round(play_button_y1 + play_button_size / 2);
+        
+        negative_button_x1 = back_button_x1;
+        negative_button_y1 = round(view_yview[0] + view_hview[0] / 2);
+        negative_button_x2 = back_button_x2;
+        negative_button_y2 = view_yview[0] + view_hview[0] + 8;
+        negative_button_icon_scale = (negative_button_width - 16) / sprite_get_width(mark_false_sprite);
+        negative_button_icon_x = round(negative_button_x1 + 8 + (negative_button_width - negative_button_icon_scale * sprite_get_width(mark_false_sprite)) / 2);
+        negative_button_icon_y = round(negative_button_y1 + (negative_button_y2 - negative_button_y1 - negative_button_icon_scale * sprite_get_height(mark_false_sprite)) / 2);
+        
+        size_chooser_x1 = round(negative_button_width / 2);
+        size_chooser_y1 = play_button_y1;
+        size_chooser_x2 = round(view_xview[0] + (view_wview[0] - negative_button_width) / 2);
+        size_chooser_y2 = round(view_yview[0] + view_hview[0] - negative_button_width / 2);
+        size_button_width = round((size_chooser_x2 - size_chooser_x1) / 2);
+        size_button_width2 = round(size_button_width / 2);
+        size_button_height = round((size_chooser_y2 - size_chooser_y1) / ds_list_size(game_area_sizes));
+        size_button_height2 = round(size_button_height / 2);
+        
+        if (use_ui_nodes) {
+            if (is_array(ui_nodes)) {
+                picross_reposition_ui_nodes(game_field);
+            }
+        }
     }
 }
 </string>
@@ -283,8 +407,176 @@ if (use_ui_nodes) {
         <arguments>
           <argument>
             <kind>1</kind>
+            <string>/// Main menu
+if (view == VIEW_MAIN_MENU) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_color(c_black);
+    // draw_set_font(fnt_picross_default);
+    
+    
+    var puzzle_clicked = false;
+    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+        if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+            if (device_mouse_x(mouse_index) &gt;= puzzle_button_x1) {
+                if (device_mouse_y(mouse_index) &gt;= puzzle_button_y1) {
+                    if (device_mouse_x(mouse_index) &lt;= puzzle_button_x2) {
+                        if (device_mouse_y(mouse_index) &lt;= puzzle_button_y2) {
+                            puzzle_clicked = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    draw_set_alpha(0.7);
+    draw_roundrect_colour(puzzle_button_x1, puzzle_button_y1, puzzle_button_x2, puzzle_button_y2, c_gray, c_dkgray, false);
+    draw_roundrect(puzzle_button_x1, puzzle_button_y1, puzzle_button_x2, puzzle_button_y2, true);
+    draw_set_alpha(1);
+    draw_text(puzzle_button_x1 + puzzle_button_width / 2, puzzle_button_y1 + puzzle_button_height / 2, puzzle_text);
+    // draw_sprite_ext(puzzle_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, puzzle_button_icon_scale, puzzle_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
+    
+    if (puzzle_clicked) {
+        // view_previous = view;
+        view = VIEW_PUZZLES;
+        buttons_blocked = 2;
+        event_user(0); // Recalculate positions and sizes
+    }
+    
+    
+    
+    
+    var random_clicked = false;
+    for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+        if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+            if (device_mouse_x(mouse_index) &gt;= random_button_x1) {
+                if (device_mouse_y(mouse_index) &gt;= random_button_y1) {
+                    if (device_mouse_x(mouse_index) &lt;= random_button_x2) {
+                        if (device_mouse_y(mouse_index) &lt;= random_button_y2) {
+                            random_clicked = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    draw_set_alpha(0.7);
+    draw_roundrect_colour(random_button_x1, random_button_y1, random_button_x2, random_button_y2, c_gray, c_dkgray, false);
+    draw_roundrect(random_button_x1, random_button_y1, random_button_x2, random_button_y2, true);
+    draw_set_alpha(1);
+    draw_text(random_button_x1 + random_button_width / 2, random_button_y1 + random_button_height / 2, random_text);
+    
+    if (random_clicked) {
+        // view_previous = view;
+        view = VIEW_RANDOM;
+        buttons_blocked = 2;
+        event_user(0); // Recalculate positions and sizes
+        
+        if (!is_array(game_field)) {
+            picross_start_new_game(fields_x, fields_y, noone); // Create game structures and start
+        }
+    }
+    
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
+</string>
+          </argument>
+        </arguments>
+      </action>
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Puzzle list
+if (view == VIEW_PUZZLES) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
+    draw_set_color(c_black);
+    // draw_set_font(fnt_picross_default);
+    
+    var button_x1 = puzzle_button_x1;
+    var button_y1 = puzzle_button_y1;
+    var button_x2 = puzzle_button_x2;
+    var button_y2 = puzzle_button_y2;
+    
+    for (puzzle_index = 0; puzzle_index &lt; ds_list_size(puzzle_files); puzzle_index++) {
+    
+        var puzzle_fname = puzzle_files[|puzzle_index];
+    
+        var puzzle_clicked = false;
+        for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+            if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                if (device_mouse_x(mouse_index) &gt;= button_x1) {
+                    if (device_mouse_y(mouse_index) &gt;= button_y1) {
+                        if (device_mouse_x(mouse_index) &lt;= button_x2) {
+                            if (device_mouse_y(mouse_index) &lt;= button_y2) {
+                                puzzle_clicked = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        draw_set_alpha(0.7);
+        draw_roundrect_colour(button_x1, button_y1, button_x2, button_y2, c_gray, c_dkgray, false);
+        draw_roundrect(button_x1, button_y1, button_x2, button_y2, true);
+        draw_set_alpha(1);
+        draw_text(button_x1 + puzzle_button_width / 2, button_y1 + puzzle_button_height / 2, puzzle_fname);
+        // draw_sprite_ext(puzzle_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, puzzle_button_icon_scale, puzzle_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
+        
+        if (puzzle_clicked) {
+            view_previous = view; // Remember where I come from
+            view = VIEW_INGAME;
+            buttons_blocked = 2;
+            picross_load_puzzle(puzzle_folder + puzzle_fname);
+            event_user(0); // Recalculate positions and sizes
+        }
+        
+        button_y1 += puzzle_button_height * 1.5;
+        button_y2  = button_y1 + puzzle_button_height;
+    }
+    
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
+}
+</string>
+          </argument>
+        </arguments>
+      </action>
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
             <string>/// Game area size chooser
-if (view == 0) {
+if (view == VIEW_RANDOM) {
     
     // Check surface size
     /*if (surface_exists(application_surface)) {
@@ -295,25 +587,25 @@ if (view == 0) {
     if (keyboard_check_pressed(left_key)) {
         var size_index = ds_list_find_index(game_area_sizes, fields_x);
         if (size_index &gt; 0) {
-            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index - 1), fields_y);
+            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index - 1), fields_y, noone);
             event_user(0); // Match sizes to new game area
         }
     } else if (keyboard_check_pressed(right_key)) {
         var size_index = ds_list_find_index(game_area_sizes, fields_x);
         if (size_index &lt; ds_list_size(game_area_sizes) - 1) {
-            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index + 1), fields_y);
+            picross_start_new_game(ds_list_find_value(game_area_sizes, size_index + 1), fields_y, noone);
             event_user(0); // Match sizes to new game area
         }
     } else if (keyboard_check_pressed(up_key)) {
         var size_index = ds_list_find_index(game_area_sizes, fields_y);
         if (size_index &gt; 0) {
-            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index - 1));
+            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index - 1), noone);
             event_user(0); // Match sizes to new game area
         }
     } else if (keyboard_check_pressed(down_key)) {
         var size_index = ds_list_find_index(game_area_sizes, fields_y);
         if (size_index &lt; ds_list_size(game_area_sizes) - 1) {
-            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index + 1));
+            picross_start_new_game(fields_x, ds_list_find_value(game_area_sizes, size_index + 1), noone);
             event_user(0); // Match sizes to new game area
         }
     }
@@ -329,19 +621,20 @@ if (view == 0) {
         for (var size_index = 0; size_index &lt; ds_list_size(game_area_sizes); size_index++) {
             var size = game_area_sizes[|size_index];    
         
-
-            for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-                if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                    if (device_mouse_x(mouse_index) &gt; xx) {
-                        if (device_mouse_y(mouse_index) &gt; yy) {
-                            if (device_mouse_x(mouse_index) &lt; xx + size_button_width) {
-                                if (device_mouse_y(mouse_index) &lt; yy + size_button_height) {
-                                    if (size_row_index == 0) {
-                                        picross_start_new_game(size, fields_y);
-                                        event_user(0); // Match sizes to new game area
-                                    } else {
-                                        picross_start_new_game(fields_x, size);
-                                        event_user(0); // Match sizes to new game area
+            if (!buttons_blocked) {
+                for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+                    if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                        if (device_mouse_x(mouse_index) &gt; xx) {
+                            if (device_mouse_y(mouse_index) &gt; yy) {
+                                if (device_mouse_x(mouse_index) &lt; xx + size_button_width) {
+                                    if (device_mouse_y(mouse_index) &lt; yy + size_button_height) {
+                                        if (size_row_index == 0) {
+                                            picross_start_new_game(size, fields_y, noone);
+                                            event_user(0); // Match sizes to new game area
+                                        } else {
+                                            picross_start_new_game(fields_x, size, noone);
+                                            event_user(0); // Match sizes to new game area
+                                        }
                                     }
                                 }
                             }
@@ -389,7 +682,7 @@ if (view == 0) {
           <argument>
             <kind>1</kind>
             <string>/// Play button
-if (view == 0) {
+if (view == VIEW_RANDOM) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     
@@ -400,7 +693,7 @@ if (view == 0) {
         back = true;
     } else if (keyboard_check_pressed(start_key)) {
         play = true;
-    } else {
+    } else if (!buttons_blocked) {
         for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
             if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
                 if (device_mouse_x(mouse_index) &gt;= game_area_x1) {
@@ -423,8 +716,9 @@ if (view == 0) {
     draw_sprite_ext(play_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, play_button_icon_scale, play_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
     
     if (play) {
-        if (view == 0) {
-            view++;
+        if (view == VIEW_RANDOM) {
+            view_previous = view; // Remember where I come from
+            view = VIEW_INGAME;
             buttons_blocked = 2;
             event_user(0); // Recalculate positions and sizes
         }
@@ -454,7 +748,7 @@ if (view == 0) {
           <argument>
             <kind>1</kind>
             <string>/// Back button
-if (view &gt; 0) {
+if (view == VIEW_PUZZLES || view == VIEW_RANDOM || view == VIEW_INGAME) {
     draw_set_halign(fa_center);
     draw_set_valign(fa_middle);
     
@@ -482,8 +776,11 @@ if (view &gt; 0) {
     draw_sprite_ext(back_arrow_spr, 0, back_button_icon_x, back_button_icon_y, back_button_icon_scale, back_button_icon_scale, 0, c_white, draw_get_alpha());
     
     if (back) {
-        if (view &gt; 0) {
-            view--;
+        if (view == VIEW_PUZZLES || view == VIEW_RANDOM) {
+            view = VIEW_MAIN_MENU;
+            event_user(0); // Recalculate positions and sizes
+        } else if (view == VIEW_INGAME) {
+            view = view_previous;
             event_user(0); // Recalculate positions and sizes
         } else {
             game_end();
@@ -514,7 +811,7 @@ if (view &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Negative button
-if (view &gt; 0) {
+if (view == VIEW_INGAME) {
     if (hold_negate) {
         negate = false; // Reset it every frame
     }
@@ -581,235 +878,293 @@ if (view &gt; 0) {
           <argument>
             <kind>1</kind>
             <string>/// Draw game area
-draw_set_halign(fa_center);
-draw_set_valign(fa_middle);
-
-var xx, yy;
-var list;// spr_picross_arrow_left
-
-
-// Draw numbers for colums
-xx = game_area_x2 - field_size2;
-for (var field_index_x = fields_x - 1; field_index_x &gt;= 0; field_index_x--) {
+if (view == VIEW_RANDOM || view == VIEW_INGAME) {
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_middle);
     
-    list = column_numbers[field_index_x];
-    yy = game_area_y1 - number_size;
-    if (ds_list_empty(list)) {
-        draw_text(xx, yy, "0");
-        yy -= number_size;
-    } else {
-        for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
-            draw_text(xx, yy, string(list[| number_index]));
+    var xx, yy;
+    var list;// spr_picross_arrow_left
+    
+    draw_set_font(number_font);
+    // Draw numbers for colums
+    xx = game_area_x2 - field_size2;
+    for (var field_index_x = fields_x - 1; field_index_x &gt;= 0; field_index_x--) {
+        
+        list = column_numbers[field_index_x];
+        yy = game_area_y1 - number_size;
+        if (ds_list_empty(list)) {
+            draw_text(xx, yy, "0");
             yy -= number_size;
-        }
-    }
-    
-    xx -= field_size;
-}
-
-// Draw numbers for rows
-yy = game_area_y2 - field_size2;
-for (var field_index_y = fields_y - 1; field_index_y &gt;= 0; field_index_y--) {
-    
-    list = row_numbers[field_index_y];
-    xx = game_area_x1 - number_size;
-    if (ds_list_empty(list)) {
-        draw_text(xx, yy, "0");
-        xx -= number_size;
-    } else {
-        for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
-            draw_text(xx, yy, string(list[| number_index]));
-            xx -= number_size;
-        }
-    }
-    
-    yy -= field_size;
-}
-
-var state_changed = false;
-// Handle game area
-xx = game_area_x2;
-for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
-    yy = game_area_y2;
-    
-    for (var field_index_y = fields_y; field_index_y &gt;= 0; field_index_y--) {
-        if (field_index_x &lt; fields_x) if (field_index_y &lt; fields_y) {
-            var field_state = game_field[field_index_y, field_index_x];
-            
-            var x1 = xx - field_size + 1;
-            var y1 = yy - field_size + 1;
-            var x2 = xx - 1;
-            var y2 = yy - 1;
-            
-            var mouse_index = 0;
-            
-            if (device_mouse_check_button_released(mouse_index, mb_left) || device_mouse_check_button_released(mouse_index, mb_right)) {
-                game_field_clicked = picross_clear_array(game_field_clicked);
-                click_command = undefined;
+        } else {
+            for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
+                draw_text(xx, yy, string(list[| number_index]));
+                yy -= number_size;
             }
-            
-            if (view &gt; 0 &amp;&amp; !is_solved) { // Only inGame
-                if (device_mouse_x(mouse_index) &gt;= x1) {
-                    if (device_mouse_y(mouse_index) &gt;= y1) {
-                        if (device_mouse_x(mouse_index) &lt;= x2 + 1) {
-                            if (device_mouse_y(mouse_index) &lt;= y2 + 1) {
-                            
-                                for (var zoom_index_x = min(field_index_x + 3, fields_x - 1); zoom_index_x &gt;= max(0, field_index_x - 3); zoom_index_x--) {
-                                    for (var zoom_index_y = min(field_index_y + 3, fields_y - 1); zoom_index_y &gt;= max(0, field_index_y - 3); zoom_index_y--) {
-                            
-                                        picross_zoom_node(zoom_index_x, zoom_index_y, mouse_index, field_size / 16);
-                                        
-                                    }
-                                }                        
-                            
-                                if (!game_field_clicked[field_index_y, field_index_x] &amp;&amp; buttons_blocked &lt;= 0) {
-                                    if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
+        }
+        
+        xx -= field_size;
+    }
+    
+    // Draw numbers for rows
+    yy = game_area_y2 - field_size2;
+    for (var field_index_y = fields_y - 1; field_index_y &gt;= 0; field_index_y--) {
+        
+        list = row_numbers[field_index_y];
+        xx = game_area_x1 - number_size;
+        if (ds_list_empty(list)) {
+            draw_text(xx, yy, "0");
+            xx -= number_size;
+        } else {
+            for (var number_index = ds_list_size(list) - 1; number_index &gt;= 0; number_index--) {
+                draw_text(xx, yy, string(list[| number_index]));
+                xx -= number_size;
+            }
+        }
+        
+        yy -= field_size;
+    }
+    draw_set_font(fnt_picross_default);
+    
+    var state_changed = false;
+    // Handle game area
+    xx = game_area_x2;
+    for (var field_index_x = fields_x; field_index_x &gt;= 0; field_index_x--) {
+        yy = game_area_y2;
+        
+        for (var field_index_y = fields_y; field_index_y &gt;= 0; field_index_y--) {
+            if (field_index_x &lt; fields_x) if (field_index_y &lt; fields_y) {
+                var field_state = game_field[field_index_y, field_index_x];
+                
+                var x1 = xx - field_size + 1;
+                var y1 = yy - field_size + 1;
+                var x2 = xx - 1;
+                var y2 = yy - 1;
+                
+                for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+                
+                    if (device_mouse_check_button_released(mouse_index, mb_left) || device_mouse_check_button_released(mouse_index, mb_right)) {
+                        game_field_clicked = picross_clear_array(game_field_clicked);
+                        click_command = undefined;
+                    }
+                    
+                    if (view == VIEW_INGAME &amp;&amp; !is_solved) { // Only inGame
+                        if (device_mouse_x(mouse_index) &gt;= x1) {
+                            if (device_mouse_y(mouse_index) &gt;= y1) {
+                                if (device_mouse_x(mouse_index) &lt;= x2 + 1) {
+                                    if (device_mouse_y(mouse_index) &lt;= y2 + 1) {
                                     
-                                        if (is_undefined(click_command)) {
-                                            if (field_state == 0) {
-                                                click_command = 1;
-                                            } else {
-                                                click_command = 0;
-                                            }
-                                        }
-                                        
-                                        if (click_command == 0) {
-                                            if (field_state != 0) {
-                                                field_state = 0;
-                                                state_changed = true;
-                                            }
-                                        } else if (click_command == 1) {
-                                            if (field_state == 0) {
-                                                field_state = 1;
-                                                state_changed = true;
-                                            }
-                                        }
-                                        
-                                        game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
-                                    } else if (device_mouse_check_button(mouse_index, mb_right) || (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; negate)) {
+                                        for (var zoom_index_x = min(field_index_x + 3, fields_x - 1); zoom_index_x &gt;= max(0, field_index_x - 3); zoom_index_x--) {
+                                            for (var zoom_index_y = min(field_index_y + 3, fields_y - 1); zoom_index_y &gt;= max(0, field_index_y - 3); zoom_index_y--) {
                                     
-                                        if (is_undefined(click_command)) {
-                                            if (field_state == 0) {
-                                                click_command = -1;
-                                            } else {
-                                                click_command = 0;
+                                                picross_zoom_node(zoom_index_x, zoom_index_y, mouse_index, field_size / 16);
+                                                
                                             }
-                                        }
-                                        
-                                        if (click_command == 0) {
-                                            if (field_state != 0) {
-                                                field_state = 0;
-                                                state_changed = true;
-                                            }
-                                        } else if (click_command == -1) {
-                                            if (field_state == 0) {
-                                                field_state = -1;
-                                                state_changed = true;
-                                            }
-                                        }
+                                        }                        
                                     
-                                        game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                                        if (!game_field_clicked[field_index_y, field_index_x] &amp;&amp; buttons_blocked &lt;= 0) {
+                                            if (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; !negate) {
+                                            
+                                                if (is_undefined(click_command)) {
+                                                    if (field_state == 0) {
+                                                        click_command = 1;
+                                                    } else {
+                                                        click_command = 0;
+                                                    }
+                                                }
+                                                
+                                                if (click_command == 0) {
+                                                    if (field_state != 0) {
+                                                        field_state = 0;
+                                                        state_changed = true;
+                                                    }
+                                                } else if (click_command == 1) {
+                                                    if (field_state == 0) {
+                                                        field_state = 1;
+                                                        state_changed = true;
+                                                    }
+                                                }
+                                                
+                                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                                            } else if (device_mouse_check_button(mouse_index, mb_right) || (device_mouse_check_button(mouse_index, mb_left) &amp;&amp; negate)) {
+                                            
+                                                if (is_undefined(click_command)) {
+                                                    if (field_state == 0) {
+                                                        click_command = -1;
+                                                    } else {
+                                                        click_command = 0;
+                                                    }
+                                                }
+                                                
+                                                if (click_command == 0) {
+                                                    if (field_state != 0) {
+                                                        field_state = 0;
+                                                        state_changed = true;
+                                                    }
+                                                } else if (click_command == -1) {
+                                                    if (field_state == 0) {
+                                                        field_state = -1;
+                                                        state_changed = true;
+                                                    }
+                                                }
+                                            
+                                                game_field_clicked[field_index_y, field_index_x] = mouse_index + 1;
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                        if (game_field[field_index_y, field_index_x] != field_state) {
+                            if (field_state) {
+                                game_field_marks++;
+                            } else if (game_field[field_index_y, field_index_x]) {
+                                game_field_marks--;
+                            }
+                            game_field[field_index_y, field_index_x] = field_state;
+                        }
                     }
                 }
-                if (game_field[field_index_y, field_index_x] != field_state) {
-                    if (field_state) {
-                        game_field_marks++;
-                    } else if (game_field[field_index_y, field_index_x]) {
-                        game_field_marks--;
-                    }
-                    game_field[field_index_y, field_index_x] = field_state;
+                
+                /*if (field_state == 1) {
+                    draw_set_alpha(0.8);
+                    draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_aqua, c_blue, false);
+                } else*/ if (field_state == -1) {
+                    draw_set_alpha(0.4);
+                    draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_black, c_white, false);
                 }
+                draw_set_alpha(1);
+                
+                draw_set_color(c_black);
+                if (!use_ui_nodes) {
+                    draw_rectangle(x1, y1, x2, y2, true);
+                }
+                
+                yy -= field_size;
             }
-            
-            /*if (field_state == 1) {
-                draw_set_alpha(0.8);
-                draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_aqua, c_blue, false);
-            } else*/ if (field_state == -1) {
-                draw_set_alpha(0.4);
-                draw_roundrect_colour(x1, y1, x2 - 1, y2 - 1, c_black, c_white, false);
-            }
-            draw_set_alpha(1);
             
             draw_set_color(c_black);
-            if (!use_ui_nodes) {
-                draw_rectangle(x1, y1, x2, y2, true);
-            }
-            
-            yy -= field_size;
-        }
-        
-        draw_set_color(c_black);
-        if (use_ui_nodes) {
-            var n1, n2, n3, n4;
-            
-            if (field_index_x &lt; fields_x) {
-                n1 = ui_nodes[field_index_y, field_index_x];
-                n2 = ui_nodes[field_index_y, field_index_x + 1];
-                draw_set_alpha(1);
-                if (field_index_y &gt; 0 &amp;&amp; field_index_y &lt; fields_y - 1 &amp;&amp; field_index_y mod hard_lines_all == 0) {
-                    draw_line_width(n1.x, n1.y, n2.x, n2.y, 3);
-                } else {
-                    draw_line(n1.x, n1.y, n2.x, n2.y);
-                }
-            }
-            if (field_index_y &lt; fields_y) {
-                n1 = ui_nodes[field_index_y, field_index_x];
-                n4 = ui_nodes[field_index_y + 1, field_index_x];
-                if (field_index_x &gt; 0 &amp;&amp; field_index_x &lt; fields_x - 1 &amp;&amp; field_index_x mod hard_lines_all == 0) {
-                    draw_line_width(n1.x, n1.y, n4.x, n4.y, 3);
-                } else {
-                    draw_line(n1.x, n1.y, n4.x, n4.y);
-                }
+            if (use_ui_nodes) {
+                var n1, n2, n3, n4;
+                
                 if (field_index_x &lt; fields_x) {
-                    if (game_field[field_index_y, field_index_x] == 1) {
-                        n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
-                        draw_sprite_pos(mark_sprite, 0, n1.x_target_start + 8, n1.y_target_start + 8, n2.x_target_start - 8, n2.y_target_start + 8, n3.x_target_start - 8, n3.y_target_start - 8, n4.x_target_start + 8, n4.y_target - 8, 0.4);
-                        draw_sprite_pos(mark_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.8);
+                    n1 = ui_nodes[field_index_y, field_index_x];
+                    n2 = ui_nodes[field_index_y, field_index_x + 1];
+                    draw_set_alpha(1);
+                    if (field_index_y &gt; 0 &amp;&amp; field_index_y &lt; fields_y - 1 &amp;&amp; field_index_y mod hard_lines_all == 0) {
+                        draw_line_width(n1.x, n1.y, n2.x, n2.y, 3);
+                    } else {
+                        draw_line(n1.x, n1.y, n2.x, n2.y);
                     }
-                    else if (game_field[field_index_y, field_index_x] == -1) {
-                        n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
-                        draw_sprite_pos(mark_false_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.5);
+                }
+                if (field_index_y &lt; fields_y) {
+                    n1 = ui_nodes[field_index_y, field_index_x];
+                    n4 = ui_nodes[field_index_y + 1, field_index_x];
+                    if (field_index_x &gt; 0 &amp;&amp; field_index_x &lt; fields_x - 1 &amp;&amp; field_index_x mod hard_lines_all == 0) {
+                        draw_line_width(n1.x, n1.y, n4.x, n4.y, 3);
+                    } else {
+                        draw_line(n1.x, n1.y, n4.x, n4.y);
+                    }
+                    if (field_index_x &lt; fields_x) {
+                        if (game_field[field_index_y, field_index_x] == 1) {
+                            n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
+                            draw_sprite_pos(mark_sprite, 0, n1.x_target_start + 8, n1.y_target_start + 8, n2.x_target_start - 8, n2.y_target_start + 8, n3.x_target_start - 8, n3.y_target_start - 8, n4.x_target_start + 8, n4.y_target - 8, 0.4);
+                            draw_sprite_pos(mark_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.8);
+                        }
+                        else if (game_field[field_index_y, field_index_x] == -1) {
+                            n3 = ui_nodes[field_index_y + 1, field_index_x + 1];
+                            draw_sprite_pos(mark_false_sprite, 0, n1.x, n1.y, n2.x, n2.y, n3.x, n3.y, n4.x, n4.y, 0.5);
+                        }
                     }
                 }
             }
+            
         }
-        
+        if (field_index_x &lt; fields_x) {
+            xx -= field_size;
+        }
     }
-    if (field_index_x &lt; fields_x) {
-        xx -= field_size;
+    
+    
+    draw_set_valign(fa_top);
+    // State changed - check for win
+    if (state_changed) {
+        is_solved = picross_check_if_solved();
+        if (is_solved) {
+            repeat(8) {
+                effect_create_above(ef_firework, view_xview[0] + random(view_wview[0]), view_yview[0] + random(view_hview[0]), irandom(2), make_colour_hsv(255, irandom(255), 120));
+            }
+        }
     }
-}
-
-
-draw_set_valign(fa_top);
-// State changed - check for win
-if (state_changed) {
-    is_solved = picross_check_if_solved();
     if (is_solved) {
-        repeat(8) {
-            effect_create_above(ef_firework, view_xview[0] + random(view_wview[0]), view_yview[0] + random(view_hview[0]), irandom(2), make_colour_hsv(255, irandom(255), 120));
-        }
+        draw_text(view_xview[0] + view_wview[0] / 2 - 2, view_yview[0] + 6, solved_text);
+        draw_text_colour(view_xview[0] + view_wview[0] / 2, view_yview[0] + 4, solved_text, c_orange, c_yellow, c_olive, c_yellow, 1);
     }
+    
+    
+    // Draw timer
+    draw_set_halign(fa_right);
+    draw_text(view_xview[0] + view_wview[0] - 4, view_yview[0] + 4, time_str + "#" + string(game_field_marks) + " / " + string(solution_marks));
+    // Draw author and version date
+    draw_set_halign(fa_center);
+    draw_set_valign(fa_bottom);
+    draw_text(view_xview[0] + view_wview[0] / 2, view_yview[0] + view_hview[0] - 2, author + " - " + version);
+    draw_set_halign(fa_left);
+    draw_set_valign(fa_top);
 }
-if (is_solved) {
-    draw_text(view_xview[0] + view_wview[0] / 2 - 2, view_yview[0] + 6, solved_text);
-    draw_text_colour(view_xview[0] + view_wview[0] / 2, view_yview[0] + 4, solved_text, c_orange, c_yellow, c_olive, c_yellow, 1);
+</string>
+          </argument>
+        </arguments>
+      </action>
+    </event>
+    <event eventtype="9" enumb="117">
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Load pattern to current game area
+if (!ds_list_empty(puzzle_files)) {
+    view_previous = view;
+    view = VIEW_INGAME;
+    picross_load_puzzle(puzzle_folder + ds_list_find_value(puzzle_files, ds_list_size(puzzle_files) - 1));
+    event_user(0); // Match sizes to new game area
 }
+</string>
+          </argument>
+        </arguments>
+      </action>
+    </event>
+    <event eventtype="9" enumb="116">
+      <action>
+        <libid>1</libid>
+        <id>603</id>
+        <kind>7</kind>
+        <userelative>0</userelative>
+        <isquestion>0</isquestion>
+        <useapplyto>-1</useapplyto>
+        <exetype>2</exetype>
+        <functionname></functionname>
+        <codestring></codestring>
+        <whoName>self</whoName>
+        <relative>0</relative>
+        <isnot>0</isnot>
+        <arguments>
+          <argument>
+            <kind>1</kind>
+            <string>/// Save pattern of current game area
 
-
-// Draw timer
-draw_set_halign(fa_right);
-draw_text(view_xview[0] + view_wview[0] - 4, view_yview[0] + 4, time_str + "#" + string(game_field_marks) + " / " + string(solution_marks));
-// Draw author and version date
-draw_set_halign(fa_center);
-draw_set_valign(fa_bottom);
-draw_text(view_xview[0] + view_wview[0] / 2, view_yview[0] + view_hview[0] - 2, author + " - " + version);
-draw_set_halign(fa_left);
-draw_set_valign(fa_top);
+fname_async_id = get_string_async("Enter filename for new puzzle:", "Puzzle " + date_datetime_string(date_current_datetime()));
 </string>
           </argument>
         </arguments>
