@@ -40,6 +40,8 @@
       <script>scripts\picross_load_pattern.gml</script>
       <script>scripts\picross_load_puzzle.gml</script>
       <script>scripts\picross_get_puzzle_files.gml</script>
+      <script>scripts\picross_add_puzzle_file.gml</script>
+      <script>scripts\picross_pattern_to_sprite.gml</script>
     </scripts>
     <script>scripts\seconds_2_time.gml</script>
   </scripts>

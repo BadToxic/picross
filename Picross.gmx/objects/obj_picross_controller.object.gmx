@@ -26,7 +26,7 @@
           <argument>
             <kind>1</kind>
             <string>/// Initialize game
-version = "2016.07.07";
+version = "2016.07.13";
 author = "BadToxic";
 base_folder = /*working_directory +*/ "picross/"
 puzzle_folder = base_folder + "puzzles/";
@@ -109,7 +109,11 @@ column_numbers = noone;
 
 fname_async_id = -1; // Asynchronous Dialog ID for entering filename
 
-puzzle_files = picross_get_puzzle_files();
+puzzle_images = ds_map_create();
+puzzle_files = ds_list_create();
+puzzle_files_by_size = ds_map_create();
+
+picross_get_puzzle_files();
 
 // picross_start_new_game(fields_x, fields_y, noone); // Create game structures and start
 </string>
@@ -221,12 +225,7 @@ if (async_id == fname_async_id) {
             
             picross_save_pattern(puzzle_folder + final_fname);
             
-            if (ds_list_find_index(puzzle_files, final_fname)) {
-                show_debug_message("(File already existed and was overwritten.)");
-            } else {
-                // Add file to file list
-                ds_list_add(puzzle_files, final_fname);
-            }
+            picross_add_puzzle_file(final_fname);
             
         }
     }
@@ -315,9 +314,9 @@ if (view == VIEW_TITLE) {
         
     if (view == VIEW_PUZZLES) {
         
-        puzzle_button_width = round(view_wview[0] / 2);
+        puzzle_button_width = round(view_wview[0] / 4);
         puzzle_button_height = 32;
-        puzzle_button_x1 = round(view_xview[0] + 0.5 * view_wview[0] - puzzle_button_width / 2);
+        puzzle_button_x1 = round(view_xview[0] + 0.25 * view_wview[0] - puzzle_button_width / 2);
         puzzle_button_y1 = view_yview[0] + puzzle_button_height;
         puzzle_button_x2 = puzzle_button_x1 + puzzle_button_width;
         puzzle_button_y2 = puzzle_button_y1 + puzzle_button_height;
@@ -509,47 +508,73 @@ if (view == VIEW_PUZZLES) {
     draw_set_color(c_black);
     // draw_set_font(fnt_picross_default);
     
-    var button_x1 = puzzle_button_x1;
+    var button_x1;
     var button_y1 = puzzle_button_y1;
-    var button_x2 = puzzle_button_x2;
-    var button_y2 = puzzle_button_y2;
+    var button_x2;
+    var button_y2;
     
-    for (puzzle_index = 0; puzzle_index &lt; ds_list_size(puzzle_files); puzzle_index++) {
+    // Iterate all size lists
+    var size_list_number = ds_map_size(puzzle_files_by_size);
+    var size_list_key = ds_map_find_first(puzzle_files_by_size);
     
-        var puzzle_fname = puzzle_files[|puzzle_index];
+    for (var size_list_index = 0; size_list_index &lt; size_list_number; size_list_index++) {
+        
+        button_x1 = puzzle_button_x1;
+        button_y2 = button_y1 + puzzle_button_height;
     
-        var puzzle_clicked = false;
-        for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-            if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                if (device_mouse_x(mouse_index) &gt;= button_x1) {
-                    if (device_mouse_y(mouse_index) &gt;= button_y1) {
-                        if (device_mouse_x(mouse_index) &lt;= button_x2) {
-                            if (device_mouse_y(mouse_index) &lt;= button_y2) {
-                                puzzle_clicked = true;
+        var size_list = ds_map_find_value(puzzle_files_by_size, size_list_key);
+    
+        for (var puzzle_index = 0; puzzle_index &lt; ds_list_size(size_list); puzzle_index++) {
+        
+            button_x2 = button_x1 + puzzle_button_width;
+            
+            var puzzle_name = size_list[|puzzle_index];
+            var puzzle_fname = size_list_key + "_" + puzzle_name + ".pic";
+        
+            var puzzle_clicked = false;
+            for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+                if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                    if (device_mouse_x(mouse_index) &gt;= button_x1) {
+                        if (device_mouse_y(mouse_index) &gt;= button_y1) {
+                            if (device_mouse_x(mouse_index) &lt;= button_x2) {
+                                if (device_mouse_y(mouse_index) &lt;= button_y2) {
+                                    puzzle_clicked = true;
+                                }
                             }
                         }
                     }
                 }
             }
+            
+            draw_set_alpha(0.7);
+            draw_roundrect_colour(button_x1, button_y1, button_x2, button_y2, c_gray, c_dkgray, false);
+            draw_roundrect(button_x1, button_y1, button_x2, button_y2, true);
+            draw_set_alpha(1);
+            draw_text(button_x1 + puzzle_button_width / 2, button_y1 + puzzle_button_height / 2, puzzle_name);
+            var puzzle_image = ds_map_find_value(puzzle_images, puzzle_fname);
+            
+            if (!is_undefined(puzzle_image)) {
+                draw_sprite(puzzle_image, 0, button_x1 + 68, button_y1 + puzzle_button_height / 2);
+            }
+            
+            
+            // draw_sprite_ext(puzzle_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, puzzle_button_icon_scale, puzzle_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
+            
+            if (puzzle_clicked) {
+                view_previous = view; // Remember where I come from
+                view = VIEW_INGAME;
+                buttons_blocked = 2;
+                picross_load_puzzle(puzzle_folder + puzzle_fname);
+                event_user(0); // Recalculate positions and sizes
+            }
+            
+            button_x1 += puzzle_button_width * 1.1;
+            
         }
         
-        draw_set_alpha(0.7);
-        draw_roundrect_colour(button_x1, button_y1, button_x2, button_y2, c_gray, c_dkgray, false);
-        draw_roundrect(button_x1, button_y1, button_x2, button_y2, true);
-        draw_set_alpha(1);
-        draw_text(button_x1 + puzzle_button_width / 2, button_y1 + puzzle_button_height / 2, puzzle_fname);
-        // draw_sprite_ext(puzzle_spr, 0, game_area_x1 + game_area_w / 2, game_area_y1 + game_area_h / 2, puzzle_button_icon_scale, puzzle_button_icon_scale, 0, c_white, 0.3 * abs(sin(blink_counter)));
+        button_y1 += puzzle_button_height * 3;
         
-        if (puzzle_clicked) {
-            view_previous = view; // Remember where I come from
-            view = VIEW_INGAME;
-            buttons_blocked = 2;
-            picross_load_puzzle(puzzle_folder + puzzle_fname);
-            event_user(0); // Recalculate positions and sizes
-        }
-        
-        button_y1 += puzzle_button_height * 1.5;
-        button_y2  = button_y1 + puzzle_button_height;
+        size_list_key = ds_map_find_next(puzzle_files_by_size, size_list_key);
     }
     
     draw_set_halign(fa_left);
