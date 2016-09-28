@@ -112,6 +112,8 @@ fname_async_id = -1; // Asynchronous Dialog ID for entering filename
 puzzle_images = ds_map_create();
 puzzle_files = ds_list_create();
 puzzle_files_by_size = ds_map_create();
+scroll_by_size = ds_map_create();
+mouse_check_button_by_size = ds_map_create();
 
 picross_get_puzzle_files();
 
@@ -316,7 +318,7 @@ if (view == VIEW_TITLE) {
         
         puzzle_button_width = round(view_wview[0] / 4);
         puzzle_button_height = 32;
-        puzzle_button_x1 = round(view_xview[0] + 0.25 * view_wview[0] - puzzle_button_width / 2);
+        puzzle_button_x1 = round(view_xview[0] + 0.3 * view_wview[0] - puzzle_button_width / 2);
         puzzle_button_y1 = view_yview[0] + puzzle_button_height;
         puzzle_button_x2 = puzzle_button_x1 + puzzle_button_width;
         puzzle_button_y2 = puzzle_button_y1 + puzzle_button_height;
@@ -521,9 +523,39 @@ if (view == VIEW_PUZZLES) {
         
         button_x1 = puzzle_button_x1;
         button_y2 = button_y1 + puzzle_button_height;
-    
+        
+        // TODO: Alle Row Daten in Liste zusammenpacken
         var size_list = ds_map_find_value(puzzle_files_by_size, size_list_key);
-    
+        var row_scroll_x = ds_map_find_value(scroll_by_size, size_list_key);
+        var row_hold = ds_map_find_value(mouse_check_button_by_size, size_list_key);
+        // TODO: row_hold_x Merken wo klick begonnen wurde
+        
+        var row_clicked = false;
+        var row_mouse_over = false;
+        for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+            if (device_mouse_x(mouse_index) &gt;= button_x1) {
+                if (device_mouse_y(mouse_index) &gt;= button_y1) {
+                    if (device_mouse_x(mouse_index) &lt;= button_x2) {
+                        if (device_mouse_y(mouse_index) &lt;= button_y2) {
+                            row_mouse_over = true;
+                            if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                                row_clicked = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!row_hold) {
+            if (row_clicked) {
+                row_hold = true;
+                // TODO: Merken welcher Finger geklickt hat
+                ds_map_replace(mouse_check_button_by_size, size_list_key, true);
+            }
+        }
+        
+        
+        
         for (var puzzle_index = 0; puzzle_index &lt; ds_list_size(size_list); puzzle_index++) {
         
             button_x2 = button_x1 + puzzle_button_width;
@@ -532,13 +564,17 @@ if (view == VIEW_PUZZLES) {
             var puzzle_fname = size_list_key + "_" + puzzle_name + ".pic";
         
             var puzzle_clicked = false;
-            for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
-                if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
-                    if (device_mouse_x(mouse_index) &gt;= button_x1) {
-                        if (device_mouse_y(mouse_index) &gt;= button_y1) {
-                            if (device_mouse_x(mouse_index) &lt;= button_x2) {
-                                if (device_mouse_y(mouse_index) &lt;= button_y2) {
-                                    puzzle_clicked = true;
+            var puzzle_mouse_over = false;
+            if (row_mouse_over) {
+                for (var mouse_index = 0; mouse_index &lt; 5; mouse_index++) {
+                    if (device_mouse_check_button_pressed(mouse_index, mb_left)) {
+                        if (device_mouse_x(mouse_index) &gt;= button_x1) {
+                            if (device_mouse_y(mouse_index) &gt;= button_y1) {
+                                if (device_mouse_x(mouse_index) &lt;= button_x2) {
+                                    if (device_mouse_y(mouse_index) &lt;= button_y2) {
+                                        puzzle_clicked = true;
+                                        // puzzle_mouse_over = true;
+                                    }
                                 }
                             }
                         }
@@ -554,7 +590,7 @@ if (view == VIEW_PUZZLES) {
             var puzzle_image = ds_map_find_value(puzzle_images, puzzle_fname);
             
             if (!is_undefined(puzzle_image)) {
-                draw_sprite(puzzle_image, 0, button_x1 + 68, button_y1 + puzzle_button_height / 2);
+                draw_sprite(puzzle_image, 0, button_x1 - 16, button_y1 + puzzle_button_height / 2);
             }
             
             
@@ -568,7 +604,7 @@ if (view == VIEW_PUZZLES) {
                 event_user(0); // Recalculate positions and sizes
             }
             
-            button_x1 += puzzle_button_width * 1.1;
+            button_x1 += puzzle_button_width * 1.2;
             
         }
         

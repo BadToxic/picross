@@ -25,6 +25,8 @@ if (ds_list_find_index(puzzle_files, file)) {
             if (is_undefined(list)) {
                 list = ds_list_create();
                 ds_map_add(puzzle_files_by_size, size_key, list);
+                ds_map_add(scroll_by_size, size_key, 0);
+                ds_map_add(mouse_check_button_by_size, size_key, false);
             }
             
             var file_short = string_copy(file, size_string_length + 1, string_length(file) - size_string_length - 4);
